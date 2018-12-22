@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.10.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dependencies.Analyser.Base\Dependencies.Analyser.Base.csproj" />
+    <ProjectReference Include="..\..\external\PeNet\src\PeNet\PeNet.csproj" />
+  </ItemGroup>
+
+</Project>

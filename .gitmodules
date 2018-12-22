@@ -1,0 +1,4 @@
+[submodule "external/PeNet"]
+	path = external/PeNet
+	url = https://github.com/iceman63/PeNet.git
+	branch = Customization
