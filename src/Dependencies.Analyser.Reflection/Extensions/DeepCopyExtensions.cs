@@ -42,6 +42,5 @@ namespace Dependencies.Analyser.Reflection.Extensions
         {
             return new AssemblyLink(transformer.Transform(baseItem, x => x.Assembly.DeepCopy(transformer)), baseItem.LinkVersion);
         }
-
     }
 }

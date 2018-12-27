@@ -12,7 +12,7 @@ namespace Dependencies.Analyser.Base.Models
     }
 
     [DebuggerDisplay("Name = {Name}, Loaded Version = {LoadedVersion}, Local= {IsLocalAssembly}, Resolved={IsResolved} , Links = {Links.Count}")]
-    public class AssemblyInformation : MarshalByRefObject
+    public class AssemblyInformation : MarshalByRefObject, IEquatable<AssemblyInformation>
     {
         public AssemblyInformation(string name,
                                    string loadedVersion,
@@ -50,5 +50,59 @@ namespace Dependencies.Analyser.Base.Models
         public DateTime CreationDate { get; set; }
 
         public List<AssemblyLink> Links { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as AssemblyInformation);
+        }
+
+        public bool Equals(AssemblyInformation other)
+        {
+            return other != null &&
+                   Name == other.Name &&
+                   LoadedVersion == other.LoadedVersion &&
+                   AssemblyName == other.AssemblyName &&
+                   IsLocalAssembly == other.IsLocalAssembly &&
+                   IsNative == other.IsNative &&
+                   IsResolved == other.IsResolved &&
+                   FullName == other.FullName &&
+                   FilePath == other.FilePath &&
+                   EqualityComparer<bool?>.Default.Equals(IsDebug, other.IsDebug) &&
+                   IsILOnly == other.IsILOnly &&
+                   EqualityComparer<TargetProcessor?>.Default.Equals(TargetProcessor, other.TargetProcessor) &&
+                   Creator == other.Creator &&
+                   CreationDate == other.CreationDate &&
+                   EqualityComparer<List<AssemblyLink>>.Default.Equals(Links, other.Links);
+        }
+
+        public override int GetHashCode()
+        {
+            var hashCode = -81212879;
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Name);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(LoadedVersion);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(AssemblyName);
+            hashCode = hashCode * -1521134295 + IsLocalAssembly.GetHashCode();
+            hashCode = hashCode * -1521134295 + IsNative.GetHashCode();
+            hashCode = hashCode * -1521134295 + IsResolved.GetHashCode();
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(FullName);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(FilePath);
+            hashCode = hashCode * -1521134295 + EqualityComparer<bool?>.Default.GetHashCode(IsDebug);
+            hashCode = hashCode * -1521134295 + IsILOnly.GetHashCode();
+            hashCode = hashCode * -1521134295 + EqualityComparer<TargetProcessor?>.Default.GetHashCode(TargetProcessor);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Creator);
+            hashCode = hashCode * -1521134295 + CreationDate.GetHashCode();
+            hashCode = hashCode * -1521134295 + EqualityComparer<List<AssemblyLink>>.Default.GetHashCode(Links);
+            return hashCode;
+        }
+
+        public static bool operator ==(AssemblyInformation information1, AssemblyInformation information2)
+        {
+            return EqualityComparer<AssemblyInformation>.Default.Equals(information1, information2);
+        }
+
+        public static bool operator !=(AssemblyInformation information1, AssemblyInformation information2)
+        {
+            return !(information1 == information2);
+        }
     }
 }

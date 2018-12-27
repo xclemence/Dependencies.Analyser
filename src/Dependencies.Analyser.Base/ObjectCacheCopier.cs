@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Dependencies.Analyser.Base
 {
@@ -29,6 +31,18 @@ namespace Dependencies.Analyser.Base
             }
 
             return value;
+        }
+
+        public IEnumerable<To> GetCacheItems<From, To>()
+        {
+            var type = typeof(From);
+
+            if (!caches.TryGetValue(type, out IDictionary<dynamic, dynamic> typeCahe))
+            {
+                return Enumerable.Empty<To>();
+            }
+
+            return typeCahe.Values.OfType<To>();
         }
     }
 }

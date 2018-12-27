@@ -10,23 +10,15 @@ using Dependencies.Analyser.Mono.Extensions;
 using Mono.Cecil;
 using PeNet;
 
-namespace Dependencies.Analyser
-{
-    public class MonoAnalyser : IManagedAnalyser
+namespace Dependencies.Analyser.Mono
+{ 
+    public class MonoAnalyser : IAssemblyAnalyser
     {
-
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded = new Dictionary<string, AssemblyInformation>();
 
-        public MonoAnalyser(string entryDll)
+        public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
         {
-            EntryDll = entryDll;
-        }
-
-        public string EntryDll { get; }
-
-        public async Task<AssemblyInformation> AnalyseAsync()
-        {
-            return await Task.Run(() => LoadManagedAssembly(EntryDll) ?? LoadNativeAssembly(EntryDll)).ConfigureAwait(false);
+            return await Task.Run(() => LoadManagedAssembly(dllPath) ?? LoadNativeAssembly(dllPath)).ConfigureAwait(false);
         }
 
         public AssemblyInformation LoadManagedAssembly(string entryDll)

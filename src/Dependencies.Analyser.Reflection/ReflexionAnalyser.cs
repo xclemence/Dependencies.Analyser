@@ -10,16 +10,9 @@ using Dependencies.Analyser.Reflection.Extensions;
 
 namespace Dependencies.Analyser.Reflection
 {
-    public class ReflexionAnalyser : MarshalByRefObject, IManagedAnalyser
+    public class ReflexionAnalyser : MarshalByRefObject, IAssemblyAnalyser
     {
-        public ReflexionAnalyser(string entryDll)
-        {
-            EntryDll = entryDll;
-        }
-
-        public string EntryDll { get; }
-
-        public async Task<AssemblyInformation> AnalyseAsync()
+        public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
         {
             return await Task.Run(() =>
             {
@@ -32,7 +25,7 @@ namespace Dependencies.Analyser.Reflection
                         type.Assembly.FullName,
                         type.FullName);
 
-                    var entryAssembly = proxy.LoadAssembly(EntryDll);
+                    var entryAssembly = proxy.LoadAssembly(dllPath);
 
                     var result = entryAssembly.DeepCopy();
 

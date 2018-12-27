@@ -4,10 +4,8 @@ using Dependencies.Analyser.Base.Models;
 
 namespace Dependencies.Analyser.Base
 {
-    public interface IManagedAnalyser
+    public interface IAssemblyAnalyser
     {
-        string EntryDll { get; }
-
-        Task<AssemblyInformation> AnalyseAsync();
+        Task<AssemblyInformation> AnalyseAsync(string dllPath);
     }
 }
