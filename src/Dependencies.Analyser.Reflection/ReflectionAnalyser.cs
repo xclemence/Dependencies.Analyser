@@ -10,7 +10,7 @@ using Dependencies.Analyser.Reflection.Extensions;
 
 namespace Dependencies.Analyser.Reflection
 {
-    public class ReflexionAnalyser : MarshalByRefObject, IAssemblyAnalyser
+    public class ReflectionAnalyser : MarshalByRefObject, IAssemblyAnalyser
     {
         public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
         {

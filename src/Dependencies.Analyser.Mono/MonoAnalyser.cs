@@ -171,6 +171,5 @@ namespace Dependencies.Analyser.Mono
 
             return info;
         }
-
     }
 }
