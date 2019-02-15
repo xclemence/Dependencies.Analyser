@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using Dependencies.Analyser.Base.Models;
 
-namespace Dependencies.Analyser.Reflection.Extensions
+namespace Dependencies.Analyser.Microsoft.Extensions
 {
     internal static class AssemblyInformationExtensions
     {

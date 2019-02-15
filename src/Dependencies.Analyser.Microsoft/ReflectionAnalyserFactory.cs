@@ -1,6 +1,6 @@
 ﻿using Dependencies.Analyser.Base;
 
-namespace Dependencies.Analyser.Reflection
+namespace Dependencies.Analyser.Microsoft
 {
     public class ReflectionAnalyserFactory : IAssemblyAnalyserFactory
     {

@@ -2,7 +2,7 @@
 using Dependencies.Analyser.Base.Models;
 using Dependencies.Analyser.Base;
 
-namespace Dependencies.Analyser.Reflection.Extensions
+namespace Dependencies.Analyser.Microsoft.Extensions
 {
     public static class DeepCopyExtensions
     {

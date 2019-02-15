@@ -84,7 +84,7 @@ namespace Dependencies.Analyser.Mono
 
             var info = new AssemblyInformation(assemblyName.Name, assembly?.Name.Version.ToString() ?? assemblyName.Version.ToString(), assemblyPath)
             {
-                IsLocalAssembly = assemblyPath != null,
+                IsLocalAssembly = assemblyPath != null || assembly == null,
                 AssemblyName = assembly?.FullName
             };
 

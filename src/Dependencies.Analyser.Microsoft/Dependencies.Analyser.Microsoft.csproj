@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\external\PeNet\src\PeNet\PeNet.csproj" />
+    <ProjectReference Include="..\Dependencies.Analyser.Base\Dependencies.Analyser.Base.csproj" />
+  </ItemGroup>
+
+</Project>
