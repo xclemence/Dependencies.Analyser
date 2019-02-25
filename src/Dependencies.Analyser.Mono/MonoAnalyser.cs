@@ -8,17 +8,22 @@ using Dependencies.Analyser.Base.Extensions;
 using Dependencies.Analyser.Base.Models;
 using Dependencies.Analyser.Mono.Extensions;
 using Mono.Cecil;
-using PeNet;
 
 namespace Dependencies.Analyser.Mono
-{ 
+{
     public class MonoAnalyser : IAssemblyAnalyser
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded = new Dictionary<string, AssemblyInformation>();
+        private readonly INativeAnalyser nativeAnalyser;
+
+        public MonoAnalyser(INativeAnalyser nativeAnalyser)
+        {
+            this.nativeAnalyser = nativeAnalyser;
+        }
 
         public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
         {
-            return await Task.Run(() => LoadManagedAssembly(dllPath) ?? LoadNativeAssembly(dllPath)).ConfigureAwait(false);
+            return await Task.Run(() => LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath)).ConfigureAwait(false);
         }
 
         public AssemblyInformation LoadManagedAssembly(string entryDll)
@@ -38,15 +43,6 @@ namespace Dependencies.Analyser.Mono
             }
         }
 
-        public AssemblyInformation LoadNativeAssembly(string entryDll)
-        {
-            var fileInfo = new FileInfo(entryDll);
-            var baseDirectory = Path.GetDirectoryName(entryDll);
-
-            return GetNative(fileInfo.Name, baseDirectory); 
-        }
-
-
         public AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
         {
             if (assembliesLoaded.TryGetValue(assemblyDefinition.Name, out AssemblyInformation assemblyFound))
@@ -61,7 +57,7 @@ namespace Dependencies.Analyser.Mono
                 info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
 
                 if (!info.IsILOnly)
-                    info.Links.AddRange(AnalyseManagedNative(info.FilePath, baseDirectory));
+                    info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
             }
 
             return info;
@@ -77,7 +73,7 @@ namespace Dependencies.Analyser.Mono
                 var resolver = new DefaultAssemblyResolver();
                 assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName); ;
             }
-            catch (Exception ex)
+            catch
             {
                 // do norting
             }
@@ -103,73 +99,11 @@ namespace Dependencies.Analyser.Mono
             return (info, assembly);
         }
 
-        private AssemblyInformation CreateNativeAssemblyInformation(string fileName, string baseDirectory)
-        {
-
-            var filePath = GetAssemblyPath(fileName, baseDirectory);
-            var isNativeSystem = false;
-
-            if (string.IsNullOrEmpty(filePath))
-            {
-                var system32Path = Environment.SystemDirectory;
-
-                var testedPath = Path.Combine(system32Path, fileName);
-                if (File.Exists(testedPath))
-                {
-                    isNativeSystem = true;
-                    filePath = testedPath;
-                }
-            }
-
-            var info = new AssemblyInformation(fileName, null, filePath)
-            {
-                IsNative = true,
-                IsLocalAssembly = !isNativeSystem,
-            };
-
-            info.EnhancePropertiesWithFile();
-
-            return info;
-        }
-
         private string GetAssemblyPath(string fileName, string baseDirectory)
         {
             var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
 
             return result.Length != 0 ? result[0] : null;
-        }
-
-        private IEnumerable<AssemblyLink> AnalyseManagedNative(string file, string baseDirectory)
-        {
-            var referencedDlls = PeFile.GetImportedPeFile(file).Select(x => x.DLL).Distinct();
-
-            foreach (var item in referencedDlls.Select(x => GetNative(x, baseDirectory)))
-                yield return new AssemblyLink(item, item.LoadedVersion);
-        }
-
-        public AssemblyInformation GetNative(string dllFile, string baseDirectory)
-        {
-            if (assembliesLoaded.TryGetValue(dllFile, out AssemblyInformation assemblyFound))
-                return assemblyFound;
-
-            var info = CreateNativeAssemblyInformation(dllFile, baseDirectory);
-
-            if (info.IsLocalAssembly && info.IsResolved)
-            {
-                var referencedDlls = PeFile.GetImportedPeFile(info.FilePath).Select(x => x.DLL).Distinct();
-
-                info.TargetProcessor = PeFile.Is64BitPeFile(info.FilePath) ? TargetProcessor.x64 : TargetProcessor.x86;
-
-                info.Links.AddRange(referencedDlls.Select(x => 
-                                                        {
-                                                            var native = GetNative(x, baseDirectory);
-                                                            return new AssemblyLink(native, native.LoadedVersion);
-                                                        }));
-            }
-
-            assembliesLoaded.Add(dllFile, info);
-
-            return info;
         }
     }
 }

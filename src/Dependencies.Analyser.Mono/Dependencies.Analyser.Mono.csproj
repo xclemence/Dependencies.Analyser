@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
 
@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dependencies.Analyser.Base\Dependencies.Analyser.Base.csproj" />
-    <ProjectReference Include="..\..\external\PeNet\src\PeNet\PeNet.csproj" />
+    <ProjectReference Include="..\Dependencies.Analyser.Native\Dependencies.Analyser.Native.csproj" />
   </ItemGroup>
 
 </Project>
