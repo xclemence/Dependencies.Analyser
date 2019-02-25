@@ -5,99 +5,109 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Dependencies.Analyser.Base;
+using Dependencies.Analyser.Base.Extensions;
 using Dependencies.Analyser.Base.Models;
 using Dependencies.Analyser.Microsoft.Extensions;
 
 namespace Dependencies.Analyser.Microsoft
 {
-    //public class ReflectionAnalyser : MarshalByRefObject, IAssemblyAnalyser
-    //{
-    //    private readonly string assemblyFullPath;
-    //    private readonly IServiceFactory<INativeAnalyser> nativeAnalyserFactory;
-    //    private string assemblyRelativePath;
-
-    //    public ReflectionAnalyser(IServiceFactory<INativeAnalyser> nativeAnalyserFactory)
-    //    {
-    //        var assemblyPath = typeof(ReflectionAnalyser).Assembly.Location;
-
-    //        var directory = Path.GetDirectoryName(assemblyPath);
-
-    //        assemblyFullPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-    //        assemblyRelativePath = directory.Replace(assemblyFullPath, ".");
-    //        this.nativeAnalyserFactory = nativeAnalyserFactory;
-    //    }
-
-    //    public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
-    //    {
-    //        return await Task.Run(() =>
-    //        {
-    //            try
-    //            {
-    //                var domainSetup = new AppDomainSetup
-    //                {
-    //                    PrivateBinPath = assemblyRelativePath
-    //                };
-
-    //                var domain = AppDomain.CreateDomain("MainResolveDomain", null, domainSetup);
-
-    //                //AppDomain.CurrentDomain.AssemblyResolve += OnCurrentDomainAssemblyResolve; ;
-    //                //Type type = typeof(ManagedAnalyserIsolation);
-    //                //var proxy = (ManagedAnalyserIsolation)domain.CreateInstanceAndUnwrap(
-    //                //    type.Assembly.FullName,
-    //                //    type.FullName);
-
-    //                var item = new ManagedAnalyserIsolation();
-
-    //                var entryAssembly = item.LoadAssembly(dllPath, nativeAnalyserFactory);
-
-    //                var result = entryAssembly.DeepCopy();
-
-    //                AppDomain.Unload(domain);
-
-    //                return result;
-    //            }
-    //            catch (Exception ex)
-    //            {
-    //                return null;
-    //            }
-    //            finally
-    //            {
-    //                AppDomain.CurrentDomain.AssemblyResolve -= OnCurrentDomainAssemblyResolve; ;
-    //            }
-
-    //        }).ConfigureAwait(false);
-    //    }
-
-    //    private Assembly OnCurrentDomainAssemblyResolve(object sender, ResolveEventArgs args)
-    //    {
-
-    //        var analyseAssembly = typeof(ReflectionAnalyser).Assembly;
-    //        if (args.Name == analyseAssembly.FullName)
-    //            return analyseAssembly;
-
-    //        return Assembly.Load(args.Name);
-    //    }
-    //}
-
-    public class ReflectionAnalyser : IAssemblyAnalyser
+    public class ReflectionAnalyser : MarshalByRefObject, IAssemblyAnalyser
     {
-        private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
-        private INativeAnalyser nativeAnalyser;
-        private string dllPath;
+        private readonly string assemblyFullPath;
+        private readonly INativeAnalyser nativeAnalyser;
+        private string assemblyRelativePath;
 
         public ReflectionAnalyser(INativeAnalyser nativeAnalyser)
         {
+            var assemblyPath = typeof(ReflectionAnalyser).Assembly.Location;
+
+            var directory = Path.GetDirectoryName(assemblyPath);
+
+            assemblyFullPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            assemblyRelativePath = directory.Replace(assemblyFullPath, ".");
             this.nativeAnalyser = nativeAnalyser;
+        }
+
+        public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    var domainSetup = new AppDomainSetup
+                    {
+                        PrivateBinPath = assemblyRelativePath
+                    };
+
+                    var domain = AppDomain.CreateDomain("MainResolveDomain", null, domainSetup);
+
+                    AppDomain.CurrentDomain.AssemblyResolve += OnCurrentDomainAssemblyResolve; ;
+                    Type type = typeof(ManagedAnalyserIsolation);
+                    var proxy = (ManagedAnalyserIsolation)domain.CreateInstanceAndUnwrap(
+                        type.Assembly.FullName,
+                        type.FullName);
+
+                    var entryAssembly = proxy.LoadAssembly(dllPath);
+
+                    var result = entryAssembly.DeepCopy();
+
+                    var baseDirectory = Path.GetDirectoryName(dllPath);
+                    AnalyseNativeAssemblies(result, baseDirectory);
+
+                    AppDomain.Unload(domain);
+
+                    return result;
+                }
+                catch (BadImageFormatException)
+                {
+                    return nativeAnalyser.LoadNativeAssembly(dllPath);
+                }
+                finally
+                {
+                    AppDomain.CurrentDomain.AssemblyResolve -= OnCurrentDomainAssemblyResolve;
+                }
+
+            }).ConfigureAwait(false);
+        }
+
+        private void AnalyseNativeAssemblies(AssemblyInformation info, string baseDirectory)
+        {
+            LoadNativeReferences(info, baseDirectory);
+
+            var subAssemblies = info.GetAllLinks().Select(x => x.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
+
+            foreach(var assembly in subAssemblies)
+                LoadNativeReferences(assembly, baseDirectory);
+        }
+
+        private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
+        {
+            if (!assembly.IsILOnly)
+                assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
+        }
+
+        private Assembly OnCurrentDomainAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+
+            var analyseAssembly = typeof(ReflectionAnalyser).Assembly;
+            if (args.Name == analyseAssembly.FullName)
+                return analyseAssembly;
+
+            return Assembly.Load(args.Name);
+        }
+    }
+
+    public class ManagedAnalyserIsolation : MarshalByRefObject
+    {
+        private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
+        private string dllPath;
+
+        public ManagedAnalyserIsolation()
+        {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();
         }
 
         private AssemblyInformation EntryAssembly { get; set; }
-
-
-        public async Task<AssemblyInformation> AnalyseAsync(string entryDll)
-        {
-            return await Task.Run(() => LoadAssembly(entryDll) ?? nativeAnalyser.LoadNativeAssembly(dllPath)).ConfigureAwait(false);
-        }
 
         public AssemblyInformation LoadAssembly(string entryDll)
         {
@@ -139,12 +149,21 @@ namespace Dependencies.Analyser.Microsoft
             if (assembly != null && info.IsLocalAssembly)
             {
                 info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
-
-                if (!info.IsILOnly)
-                    info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
             }
 
             return info;
+        }
+
+        private Assembly SearchInLoadedAssembly(AssemblyName assemblyName)
+        {
+            try
+            {
+                return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.FullName == assemblyName.FullName) ?? Assembly.Load(assemblyName);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private (AssemblyInformation info, Assembly assembly) CreateManagedAssemblyInformation(AssemblyName assemblyName, string baseDirectory, string extension = "dll")
@@ -158,7 +177,8 @@ namespace Dependencies.Analyser.Microsoft
             }
             catch (Exception ex)
             {
-                // do norting
+                asmToCheck = null;
+                assembly = SearchInLoadedAssembly(assemblyName);
             }
 
             var info = new AssemblyInformation(assemblyName.Name, assembly?.GetName().Version.ToString() ?? assemblyName.Version.ToString(), asmToCheck)

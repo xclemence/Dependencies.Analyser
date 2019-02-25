@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Dependencies.Analyser.Base.Models;
 
@@ -22,6 +23,17 @@ namespace Dependencies.Analyser.Base.Extensions
 
             if (!info.IsDebug.HasValue)
                 info.IsDebug = fileVersionInfo.IsDebug;
+        }
+
+        public static IEnumerable<AssemblyLink> GetAllLinks(this AssemblyInformation assembly)
+        {
+            foreach (var item in assembly.Links)
+            {
+                yield return item;
+
+                foreach (var subItem in item.Assembly.GetAllLinks())
+                    yield return subItem;
+            }
         }
     }
 }
