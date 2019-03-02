@@ -14,16 +14,19 @@ namespace Dependencies.Analyser.Native
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
         private readonly IDictionary<string, string> windowsApiMap;
+        private readonly bool scanGlobalAssemblies;
 
-        public NativeAnalyser()
+
+        public NativeAnalyser(ISettingProvider setting)
         {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();
+            scanGlobalAssemblies = setting.GetSettring<bool>(SettingKeys.ScanGlobalNative);
 
             var apiMapProvider = new ApiSetMapProviderInterop();
             var baseMap = apiMapProvider.GetApiSetMap();
 
             windowsApiMap = baseMap.Select(x => (key: x.Key,  target: x.Value.FirstOrDefault(a => string.IsNullOrEmpty(a.alias)).name))
-                                    .ToDictionary(x => $"{x.key}.dll", x => x.target);
+                                    .ToDictionary(x => $"{x.key.ToLower()}.dll", x => x.target);
         }
 
         public AssemblyInformation LoadNativeAssembly(string entryDll)
@@ -31,7 +34,8 @@ namespace Dependencies.Analyser.Native
             var fileInfo = new FileInfo(entryDll);
             var baseDirectory = Path.GetDirectoryName(entryDll);
 
-            return GetNative(fileInfo.Name, baseDirectory); 
+            var (file, filePath, isSystem) = GetFilePath(fileInfo.Name, baseDirectory);
+            return GetNative(file, filePath, isSystem, baseDirectory); 
         }
 
 
@@ -89,38 +93,40 @@ namespace Dependencies.Analyser.Native
 
         public IEnumerable<AssemblyLink> GetNativeLinks(string file, string baseDirectory)
         {
-            var referencedDlls = PeFile.GetImportedPeFile(file).Select(x => x.DLL).Distinct();
+            var referencedDlls = PeFile.GetImportedPeFile(file)
+                                       .Select(x => GetFilePath(x.DLL, baseDirectory))
+                                       .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
+                                       .Distinct()
+                                       .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
-            foreach (var item in referencedDlls.Select(x => GetNative(x, baseDirectory)))
+
+            foreach (var item in referencedDlls)
                 yield return new AssemblyLink(item, item.LoadedVersion);
         }
 
-        public AssemblyInformation GetNative(string dllFile, string baseDirectory)
+        public AssemblyInformation GetNative(string fileName, string filePath, bool isSystem, string baseDirectory)
         {
-            var (file, filePath, isSystem) = GetFilePath(dllFile, baseDirectory);
-
-            if (assembliesLoaded.TryGetValue(file, out AssemblyInformation assemblyFound))
+            if (assembliesLoaded.TryGetValue(fileName.ToLower(), out AssemblyInformation assemblyFound))
                 return assemblyFound;
 
-            var info = CreateNativeAssemblyInformation(file, filePath, isSystem);
+            var info = CreateNativeAssemblyInformation(fileName, filePath, isSystem);
+            assembliesLoaded.Add(fileName, info);
 
             if (info.IsResolved)
             {
-                var referencedDlls = PeFile.GetImportedPeFile(info.FilePath).Select(x => x.DLL).Distinct();
+                var referencedDlls = PeFile.GetImportedPeFile(info.FilePath).Select(x => x.DLL).Distinct().ToList();
 
                 info.TargetProcessor = PeFile.Is64BitPeFile(info.FilePath) ? TargetProcessor.x64 : TargetProcessor.x86;
 
-                if(info.IsLocalAssembly)
+                if (scanGlobalAssemblies || info.IsLocalAssembly)
                 {
-                    info.Links.AddRange(referencedDlls.Select(x =>
+                    info.Links.AddRange(referencedDlls.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
                     {
-                        var native = GetNative(x, baseDirectory);
+                        var native = GetNative(x.file, x.filePath, x.isSystem, baseDirectory);
                         return new AssemblyLink(native, native.LoadedVersion);
                     }));
                 }
             }
-
-            assembliesLoaded.Add(file, info);
 
             return info;
         }

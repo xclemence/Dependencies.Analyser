@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Dependencies.Analyser.Base.Models;
 
 namespace Dependencies.Analyser.Base.Extensions
@@ -34,6 +35,27 @@ namespace Dependencies.Analyser.Base.Extensions
                 foreach (var subItem in item.Assembly.GetAllLinks())
                     yield return subItem;
             }
+        }
+
+        public static AssemblyInformation RemoveChildenLoop(this AssemblyInformation assembly)
+        {
+            var path = new List<AssemblyInformation> { assembly };
+            assembly.Links = assembly.Links.Where(x => x.Assembly.RemoveChildenLoop(path)).ToList();
+            return assembly;
+        }
+
+        private static bool RemoveChildenLoop(this AssemblyInformation assembly, IEnumerable<AssemblyInformation> path)
+        {
+            var currentPath = path.ToList();
+
+            if (currentPath.Contains(assembly))
+                return false;
+
+            currentPath.Add(assembly);
+
+            assembly.Links = assembly.Links.Where(x => RemoveChildenLoop(x.Assembly, currentPath)).ToList();
+
+            return true;
         }
     }
 }

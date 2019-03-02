@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Dependencies.Analyser.Base.Models;
 
 namespace Dependencies.Analyser.Base

@@ -15,15 +15,21 @@ namespace Dependencies.Analyser.Mono
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded = new Dictionary<string, AssemblyInformation>();
         private readonly INativeAnalyser nativeAnalyser;
+        private readonly ISettingProvider settings;
 
-        public MonoAnalyser(INativeAnalyser nativeAnalyser)
+        public MonoAnalyser(INativeAnalyser  nativeAnalyser, ISettingProvider settings)
         {
             this.nativeAnalyser = nativeAnalyser;
+            this.settings = settings;
         }
 
-        public async Task<AssemblyInformation> AnalyseAsync(string dllPath)
+        public async Task<AssemblyInformation> AnalyseAsync(string dllPath) =>
+            await Task.Run(() => LoadAssembly(dllPath)).ConfigureAwait(false);
+
+        private AssemblyInformation LoadAssembly(string dllPath)
         {
-            return await Task.Run(() => LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath)).ConfigureAwait(false);
+            var assembly = LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath);
+            return assembly.RemoveChildenLoop();
         }
 
         public AssemblyInformation LoadManagedAssembly(string entryDll)
@@ -46,11 +52,11 @@ namespace Dependencies.Analyser.Mono
 
             assembliesLoaded.Add(assemblyDefinition.Name, info);
 
-            if (assembly != null && info.IsLocalAssembly)
+            if (assembly != null && (info.IsLocalAssembly || settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged)))
             {
                 info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
 
-                if (!info.IsILOnly)
+                if (!info.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
             }
 
