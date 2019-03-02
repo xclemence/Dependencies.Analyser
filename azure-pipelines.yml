@@ -6,9 +6,6 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'VS2019-Win2019'
-
 variables:
   solution: '**/Dependencies.Analyser.sln'
   buildPlatform: 'Any CPU'
