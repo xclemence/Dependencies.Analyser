@@ -8,7 +8,7 @@ trigger:
 
 variables:
   solution: '**/Dependencies.Analyser.sln'
-  buildPlatform: 'Any CPU'
+  buildPlatform: 'x64'
   buildConfiguration: 'Release'
 
 steps:
