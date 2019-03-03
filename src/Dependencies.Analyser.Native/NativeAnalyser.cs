@@ -38,7 +38,6 @@ namespace Dependencies.Analyser.Native
             return GetNative(file, filePath, isSystem, baseDirectory); 
         }
 
-
         private string GetSystemFile(string fileName)
         {
             if (windowsApiMap.TryGetValue(fileName, out string file))
@@ -47,7 +46,7 @@ namespace Dependencies.Analyser.Native
             return fileName;
         }
 
-        public (string file, string filePath, bool isSystem) GetFilePath(string fileName, string baseDirectory)
+        private (string file, string filePath, bool isSystem) GetFilePath(string fileName, string baseDirectory)
         {
             var file = fileName;
             var filePath = GetAssemblyPath(fileName, baseDirectory);
@@ -99,9 +98,16 @@ namespace Dependencies.Analyser.Native
                                        .Distinct()
                                        .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
-
             foreach (var item in referencedDlls)
                 yield return new AssemblyLink(item, item.LoadedVersion);
+        }
+
+        public AssemblyLink GetNativeLink(string dllName, string baseDirectory)
+        {
+            var (file, filePath, isSystem) = GetFilePath(dllName, baseDirectory);
+            var assembly = GetNative(file, filePath, isSystem, baseDirectory);
+
+            return new AssemblyLink(assembly, assembly.LoadedVersion);
         }
 
         public AssemblyInformation GetNative(string fileName, string filePath, bool isSystem, string baseDirectory)

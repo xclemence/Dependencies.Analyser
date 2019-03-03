@@ -71,5 +71,27 @@ namespace Dependencies.Analyser.Microsoft.Extensions
                 info.IsDebug = !((bool)arg.TypedValue.Value);
             }
         }
+
+        public static string GetDllImportDllName(this MethodInfo method)
+        {
+            var attribute = method.GetCustomAttributesData().FirstOrDefault(x => x.ToString().StartsWith("[System.Runtime.InteropServices.DllImportAttribute"));
+
+            if (attribute == null)
+                return null;
+
+            return attribute.ConstructorArguments[0].Value.ToString();
+        }
+
+        public static IEnumerable<string> GetDllImportReferences(this Assembly assembly)
+        {
+            var result = assembly.GetTypes().SelectMany(x => x.GetMethods())
+                                            .Where(x => x.IsStatic)
+                                            .Select(x => x.GetDllImportDllName())
+                                            .Where(x => !string.IsNullOrEmpty(x))
+                                            .Distinct()
+                                            .ToList();
+
+            return result;
+        }
     }
 }

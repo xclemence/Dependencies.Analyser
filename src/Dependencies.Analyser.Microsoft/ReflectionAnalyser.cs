@@ -50,12 +50,12 @@ namespace Dependencies.Analyser.Microsoft
                     type.Assembly.FullName,
                     type.FullName);
 
-                var entryAssembly = proxy.LoadAssembly(dllPath, settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged));
+                var (assembly, dllImports) = proxy.LoadAssembly(dllPath, settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged), settings.GetSettring<bool>(SettingKeys.ScanDllImport));
 
-                var result = entryAssembly.DeepCopy();
+                var result = assembly.DeepCopy();
 
                 var baseDirectory = Path.GetDirectoryName(dllPath);
-                AnalyseNativeAssemblies(result, baseDirectory);
+                AnalyseNativeAssemblies(result, baseDirectory, dllImports);
 
                 AppDomain.Unload(domain);
 
@@ -71,20 +71,35 @@ namespace Dependencies.Analyser.Microsoft
             }
         }
 
-        private void AnalyseNativeAssemblies(AssemblyInformation info, string baseDirectory)
+        private void AnalyseNativeAssemblies(AssemblyInformation info, string baseDirectory, IDictionary<string, IList<string>> dllImports)
         {
-            LoadNativeReferences(info, baseDirectory);
+            LoadNativeReferences(info, baseDirectory, dllImports);
 
             var subAssemblies = info.GetAllLinks().Select(x => x.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
 
             foreach(var assembly in subAssemblies)
-                LoadNativeReferences(assembly, baseDirectory);
+                LoadNativeReferences(assembly, baseDirectory, dllImports);
         }
 
-        private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
+        private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory, IDictionary<string, IList<string>> dllImports)
         {
             if (!assembly.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
                 assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
+
+
+            if(dllImports.TryGetValue(assembly.FullName, out IList<string> references))
+                LoadDllImportRefrences(assembly, baseDirectory, references);
+        }
+
+        private void LoadDllImportRefrences(AssemblyInformation assembly, string baseDirectory, IList<string> references)
+        {
+            foreach (var item in references)
+            {
+                var link = nativeAnalyser.GetNativeLink(item, baseDirectory);
+
+                if(!assembly.Links.Contains(link))
+                    assembly.Links.Add(link);
+            }
         }
 
         private Assembly OnCurrentDomainAssemblyResolve(object sender, ResolveEventArgs args)
@@ -101,23 +116,27 @@ namespace Dependencies.Analyser.Microsoft
     public class ManagedAnalyserIsolation : MarshalByRefObject
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
+        private readonly IDictionary<string, IList<string>> dllImportReferences;
         private string dllPath;
         private bool loadGlobal;
+        private bool analyseDllimportAttribute;
 
         public ManagedAnalyserIsolation()
         {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();
+            dllImportReferences = new Dictionary<string, IList<string>>();
         }
 
         private AssemblyInformation EntryAssembly { get; set; }
 
-        public AssemblyInformation LoadAssembly(string entryDll, bool loadGlobalAssemblies)
+        public (AssemblyInformation assembly, IDictionary<string, IList<string>> dllImports) LoadAssembly(string entryDll, bool loadGlobalAssemblies, bool analyseDllimportAttribute)
         {
             var fileInfo = new FileInfo(entryDll);
             var baseDirectory = Path.GetDirectoryName(entryDll);
 
             dllPath = baseDirectory;
             loadGlobal = loadGlobalAssemblies;
+            this.analyseDllimportAttribute = analyseDllimportAttribute;
 
             AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += OnCurrentDomainReflectionOnlyAssemblyResolve;
 
@@ -127,7 +146,7 @@ namespace Dependencies.Analyser.Microsoft
 
             AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve -= OnCurrentDomainReflectionOnlyAssemblyResolve;
 
-            return EntryAssembly;
+            return (EntryAssembly, dllImportReferences);
         }
 
         private Assembly OnCurrentDomainReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
@@ -149,7 +168,12 @@ namespace Dependencies.Analyser.Microsoft
             assembliesLoaded.Add(assemblyName.Name, info);
 
             if (assembly != null && (info.IsLocalAssembly || loadGlobal))
+            {
                 info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
+
+                if (analyseDllimportAttribute)
+                    dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
+            }
 
             return info;
         }
@@ -169,13 +193,13 @@ namespace Dependencies.Analyser.Microsoft
         private (AssemblyInformation info, Assembly assembly) CreateManagedAssemblyInformation(AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             var asmToCheck = GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
+            Assembly assembly;
 
-            Assembly assembly = null;
             try
             {
                 assembly = asmToCheck != null ? Assembly.ReflectionOnlyLoadFrom(asmToCheck) : Assembly.ReflectionOnlyLoad(assemblyName.FullName);
             }
-            catch (Exception ex)
+            catch
             {
                 asmToCheck = null;
                 assembly = SearchInLoadedAssembly(assemblyName);
@@ -190,7 +214,6 @@ namespace Dependencies.Analyser.Microsoft
             try
             {
                 info.EnhanceProperties(assembly?.GetModules().First());
-
             }
             catch
             {

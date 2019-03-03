@@ -7,5 +7,6 @@ namespace Dependencies.Analyser.Base
     {
         IEnumerable<AssemblyLink> GetNativeLinks(string file, string baseDirectory);
         AssemblyInformation LoadNativeAssembly(string entryDll);
+        AssemblyLink GetNativeLink(string dllName, string baseDirectory);
     }
 }

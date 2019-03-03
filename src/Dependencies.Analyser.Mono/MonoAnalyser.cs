@@ -58,9 +58,37 @@ namespace Dependencies.Analyser.Mono
 
                 if (!info.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
+
+                if (settings.GetSettring<bool>(SettingKeys.ScanDllImport))
+                    AppendDllImportDll(info, assembly, baseDirectory);
             }
 
             return info;
+        }
+
+        private void AppendDllImportDll(AssemblyInformation info, AssemblyDefinition assembly, string baseDirectory)
+        {
+            var externalDllNames = GetDllImportValues(assembly);
+
+            foreach (var item in externalDllNames)
+            {
+                var link = nativeAnalyser.GetNativeLink(item, baseDirectory);
+
+                if (!info.Links.Contains(link))
+                    info.Links.Add(link);
+            }
+        }
+
+        private IEnumerable<string> GetDllImportValues(AssemblyDefinition assembly)
+        {
+            var externalLibNames = assembly.Modules.SelectMany(x => x.Types)
+                                          .SelectMany(x => x.Methods)
+                                          .Where(x => x.IsStatic && x.IsPInvokeImpl && x.IsPreserveSig)
+                                          .Select(x => x.PInvokeInfo?.Module?.Name)
+                                          .Where(x => !string.IsNullOrEmpty(x))
+                                          .Distinct();
+
+            return externalLibNames;
         }
 
         private (AssemblyInformation info, AssemblyDefinition assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string baseDirectory, string extension = "dll")
