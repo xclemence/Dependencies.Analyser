@@ -116,7 +116,7 @@ namespace Dependencies.Analyser.Native
                 return assemblyFound;
 
             var info = CreateNativeAssemblyInformation(fileName, filePath, isSystem);
-            assembliesLoaded.Add(fileName, info);
+            assembliesLoaded.Add(fileName.ToLower(), info);
 
             if (info.IsResolved)
             {
