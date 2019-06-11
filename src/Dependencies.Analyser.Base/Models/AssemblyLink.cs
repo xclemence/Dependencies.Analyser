@@ -7,15 +7,17 @@ namespace Dependencies.Analyser.Base.Models
     [DebuggerDisplay("Assembly = {Assembly.Name}, Version = {LinkVersion}")]
     public class AssemblyLink : MarshalByRefObject, IEquatable<AssemblyLink>
     {
+        public AssemblyLink() { }
+
         public AssemblyLink(AssemblyInformation assembly, string linkVersion)
         {
             Assembly = assembly;
             LinkVersion = linkVersion;
         }
 
-        public AssemblyInformation Assembly { get; }
+        public AssemblyInformation Assembly { get; set; }
 
-        public string LinkVersion { get; }
+        public string LinkVersion { get; set; }
 
         public override bool Equals(object obj)
         {

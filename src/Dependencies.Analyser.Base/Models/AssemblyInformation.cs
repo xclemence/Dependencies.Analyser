@@ -14,6 +14,9 @@ namespace Dependencies.Analyser.Base.Models
     [DebuggerDisplay("Name = {Name}, Loaded Version = {LoadedVersion}, Local= {IsLocalAssembly}, Resolved={IsResolved} , Links = {Links.Count}")]
     public class AssemblyInformation : MarshalByRefObject, IEquatable<AssemblyInformation>
     {
+
+        public AssemblyInformation() { }
+
         public AssemblyInformation(string name,
                                    string loadedVersion,
                                    string filePath)
@@ -24,7 +27,7 @@ namespace Dependencies.Analyser.Base.Models
             FilePath = filePath;
         }
 
-        public string Name { get; }
+        public string Name { get; set;  }
         public string LoadedVersion { get; set; }
 
         public string AssemblyName { get; set; }
