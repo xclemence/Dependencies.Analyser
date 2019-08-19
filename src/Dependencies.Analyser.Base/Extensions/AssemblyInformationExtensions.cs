@@ -22,7 +22,7 @@ namespace Dependencies.Analyser.Base.Extensions
             if (string.IsNullOrEmpty(info.LoadedVersion))
                 info.LoadedVersion = fileVersionInfo.ProductVersion;
 
-            if (!info.IsDebug.HasValue)
+            if (info.IsDebug.HasValue)
                 info.IsDebug = fileVersionInfo.IsDebug;
         }
 

@@ -85,6 +85,8 @@ namespace Dependencies.Analyser.Native
 
         private string GetAssemblyPath(string fileName, string baseDirectory)
         {
+            if (!fileName.EndsWith(".dll"))
+                fileName = $"{ fileName }.dll";
             var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
 
             return result.Length != 0 ? result[0] : null;
@@ -112,7 +114,7 @@ namespace Dependencies.Analyser.Native
 
         public AssemblyInformation GetNative(string fileName, string filePath, bool isSystem, string baseDirectory)
         {
-            if (assembliesLoaded.TryGetValue(fileName.ToLower(), out AssemblyInformation assemblyFound))
+            if (assembliesLoaded.TryGetValue(fileName.ToLower(), out var assemblyFound))
                 return assemblyFound;
 
             var info = CreateNativeAssemblyInformation(fileName, filePath, isSystem);

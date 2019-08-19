@@ -34,13 +34,19 @@ namespace Dependencies.Analyser.Mono
 
         public AssemblyInformation LoadManagedAssembly(string entryDll)
         {
+            try
+            {
+                var fileInfo = new FileInfo(entryDll);
+                var baseDirectory = Path.GetDirectoryName(entryDll);
 
-            var fileInfo = new FileInfo(entryDll);
-            var baseDirectory = Path.GetDirectoryName(entryDll);
+                var assembly = AssemblyDefinition.ReadAssembly(entryDll);
 
-            var assembly = AssemblyDefinition.ReadAssembly(entryDll);
-
-            return GetManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", ""));
+                return GetManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", ""));
+            }
+            catch (BadImageFormatException)
+            {
+                return null;
+            }
         }
 
         public AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
