@@ -1,17 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
-    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" Version="0.10.4" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Dependencies.Analyser.Base\Dependencies.Analyser.Base.csproj" />
-    <ProjectReference Include="..\Dependencies.Analyser.Native\Dependencies.Analyser.Native.csproj" />
   </ItemGroup>
 
 </Project>

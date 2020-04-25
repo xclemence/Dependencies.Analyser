@@ -37,12 +37,13 @@ namespace Dependencies.Analyser.Microsoft
         {
             try
             {
-                var domainSetup = new AppDomainSetup
-                {
-                    PrivateBinPath = assemblyRelativePath
-                };
+                //var domainSetup = new AppDomainSetup()
+                //{
+                //    PrivateBinPath = assemblyRelativePath
+                //};
 
-                var domain = AppDomain.CreateDomain("MainResolveDomain", null, domainSetup);
+                var domain = AppDomain.CreateDomain("MainResolveDomain");
+                domain.AppendPrivatePath(assemblyRelativePath);
 
                 AppDomain.CurrentDomain.AssemblyResolve += OnCurrentDomainAssemblyResolve; ;
                 Type type = typeof(ManagedAnalyserIsolation);
