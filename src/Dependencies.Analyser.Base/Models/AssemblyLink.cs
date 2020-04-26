@@ -9,15 +9,18 @@ namespace Dependencies.Analyser.Base.Models
     {
         public AssemblyLink() { }
 
-        public AssemblyLink(AssemblyInformation assembly, string linkVersion)
+        public AssemblyLink(AssemblyInformation assembly, string linkVersion, string linkFullName)
         {
             Assembly = assembly;
             LinkVersion = linkVersion;
+            LinkFullName = linkFullName;
         }
 
         public AssemblyInformation Assembly { get; set; }
 
         public string LinkVersion { get; set; }
+
+        public string LinkFullName { get; set; }
 
         public override bool Equals(object obj)
         {

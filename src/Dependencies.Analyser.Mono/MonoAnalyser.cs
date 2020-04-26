@@ -60,7 +60,7 @@ namespace Dependencies.Analyser.Mono
 
             if (assembly != null && (info.IsLocalAssembly || settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
+                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
 
                 if (!info.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));

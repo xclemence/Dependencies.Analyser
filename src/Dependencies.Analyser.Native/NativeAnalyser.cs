@@ -101,7 +101,7 @@ namespace Dependencies.Analyser.Native
                                        .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
             foreach (var item in referencedDlls)
-                yield return new AssemblyLink(item, item.LoadedVersion);
+                yield return new AssemblyLink(item, item.LoadedVersion, item.FullName);
         }
 
         public AssemblyLink GetNativeLink(string dllName, string baseDirectory)
@@ -109,7 +109,7 @@ namespace Dependencies.Analyser.Native
             var (file, filePath, isSystem) = GetFilePath(dllName, baseDirectory);
             var assembly = GetNative(file, filePath, isSystem, baseDirectory);
 
-            return new AssemblyLink(assembly, assembly.LoadedVersion);
+            return new AssemblyLink(assembly, assembly.LoadedVersion, assembly.FullName);
         }
 
         public AssemblyInformation GetNative(string fileName, string filePath, bool isSystem, string baseDirectory)
@@ -131,7 +131,7 @@ namespace Dependencies.Analyser.Native
                     info.Links.AddRange(referencedDlls.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
                     {
                         var native = GetNative(x.file, x.filePath, x.isSystem, baseDirectory);
-                        return new AssemblyLink(native, native.LoadedVersion);
+                        return new AssemblyLink(native, native.LoadedVersion, native.FullName);
                     }));
                 }
             }
