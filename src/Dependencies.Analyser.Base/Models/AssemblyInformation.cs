@@ -45,6 +45,8 @@ namespace Dependencies.Analyser.Base.Models
         public bool? IsDebug { get; set; }
 
         public bool IsILOnly { get; set; }
+        
+        public string TargetFramework { get; set; }
 
         public TargetProcessor? TargetProcessor { get; set; }
 
