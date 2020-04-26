@@ -4,9 +4,9 @@ namespace Dependencies.Analyser.Mono
 {
     public class MonoAnalyserFactory : IAssemblyAnalyserFactory
     {
-        private readonly IServiceFactory<MonoAnalyser> serviceFactory;
+        private readonly IAnalyserServiceFactory<MonoAnalyser> serviceFactory;
 
-        public MonoAnalyserFactory(IServiceFactory<MonoAnalyser> serviceFactory)
+        public MonoAnalyserFactory(IAnalyserServiceFactory<MonoAnalyser> serviceFactory)
         {
             this.serviceFactory = serviceFactory;
         }
