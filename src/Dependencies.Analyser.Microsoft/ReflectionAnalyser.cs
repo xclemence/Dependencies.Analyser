@@ -170,7 +170,7 @@ namespace Dependencies.Analyser.Microsoft
 
             if (assembly != null && (info.IsLocalAssembly || loadGlobal))
             {
-                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
+                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
 
                 if (analyseDllimportAttribute)
                     dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();

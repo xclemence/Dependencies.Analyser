@@ -40,7 +40,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
         internal static AssemblyLink DeepCopy(this AssemblyLink baseItem, ObjectCacheTransformer transformer)
         {
-            return new AssemblyLink(transformer.Transform(baseItem, x => x.Assembly.DeepCopy(transformer)), baseItem.LinkVersion);
+            return new AssemblyLink(transformer.Transform(baseItem, x => x.Assembly.DeepCopy(transformer)), baseItem.LinkVersion, baseItem.LinkFullName);
         }
     }
 }
