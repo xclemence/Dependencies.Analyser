@@ -4,9 +4,9 @@ namespace Dependencies.Analyser.Microsoft
 {
     public class ReflectionAnalyserFactory : IAssemblyAnalyserFactory
     {
-        private readonly IServiceFactory<ReflectionAnalyser> serviceFactory;
+        private readonly IAnalyserServiceFactory<ReflectionAnalyser> serviceFactory;
 
-        public ReflectionAnalyserFactory(IServiceFactory<ReflectionAnalyser> serviceFactory)
+        public ReflectionAnalyserFactory(IAnalyserServiceFactory<ReflectionAnalyser> serviceFactory)
         {
             this.serviceFactory = serviceFactory;
         }

@@ -20,7 +20,7 @@ namespace Dependencies.Analyser.Native
         public NativeAnalyser(ISettingProvider setting)
         {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();
-            scanGlobalAssemblies = setting.GetSettring<bool>(SettingKeys.ScanGlobalNative);
+            scanGlobalAssemblies = setting.GetSetting<bool>(SettingKeys.ScanGlobalNative);
 
             var apiMapProvider = new ApiSetMapProviderInterop();
             var baseMap = apiMapProvider.GetApiSetMap();
@@ -76,6 +76,7 @@ namespace Dependencies.Analyser.Native
             {
                 IsNative = true,
                 IsLocalAssembly = !isSystem,
+                IsResolved = isSystem || filePath != null
             };
 
             info.EnhancePropertiesWithFile();

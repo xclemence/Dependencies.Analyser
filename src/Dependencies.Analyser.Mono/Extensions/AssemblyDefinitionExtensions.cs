@@ -19,39 +19,63 @@ namespace Dependencies.Analyser.Mono.Extensions
 
         public static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition assembly)
         {
-            info.IsILOnly = (assembly.MainModule.Attributes & ModuleAttributes.ILOnly) == ModuleAttributes.ILOnly;
+            if (assembly == null)
+                return;
 
-            if (assembly.MainModule.Architecture == TargetArchitecture.I386 && info.IsILOnly) // This configuration is for any CPU...
-                info.TargetProcessor = TargetProcessor.AnyCpu;
-            else
-                info.TargetProcessor = TargetProcessorProvider[assembly.MainModule.Architecture];
+            try
+            {
+                info.IsILOnly = (assembly.MainModule.Attributes & ModuleAttributes.ILOnly) == ModuleAttributes.ILOnly;
 
+                if (assembly.MainModule.Architecture == TargetArchitecture.I386 && info.IsILOnly) // This configuration is for any CPU...
+                    info.TargetProcessor = TargetProcessor.AnyCpu;
+                else
+                    info.TargetProcessor = TargetProcessorProvider[assembly.MainModule.Architecture];
 
-            info.SetIsDebugFlag(assembly);
+                info.IsDebug = assembly.GetIsDebugFlag();
+                info.TargetFramework = assembly.GetTargetFramework();
+            }
+            catch
+            {
+                // We keep information and skip error
+            }
+
         }
 
-        public static void SetIsDebugFlag(this AssemblyInformation info, AssemblyDefinition assembly)
+        public static bool? GetIsDebugFlag(this AssemblyDefinition assembly)
         {
             var debugAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == "System.Diagnostics.DebuggableAttribute");
 
-            if (debugAttribute == null) return;
+            if (debugAttribute == null) return null;
+
+            var isDebug = false;    
 
             if (debugAttribute.ConstructorArguments.Count == 1)
             {
                 var mode = (DebuggableAttribute.DebuggingModes)debugAttribute.ConstructorArguments[0].Value;
 
-                info.IsDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
+                isDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
             }
             else
             {
-                info.IsDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
+                isDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
             }
 
             if (debugAttribute.Properties.Any(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled))))
             {
                 var arg = debugAttribute.Properties.SingleOrDefault(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled)));
-                info.IsDebug = !((bool)arg.Argument.Value);
+                isDebug = !((bool)arg.Argument.Value);
             }
+
+            return isDebug;
+        }
+
+        public static string GetTargetFramework(this AssemblyDefinition assembly)
+        {
+            var targetFrameworkAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == "System.Runtime.Versioning.TargetFrameworkAttribute");
+
+            if (targetFrameworkAttribute == null || targetFrameworkAttribute.ConstructorArguments.Count != 1) return string.Empty;
+
+            return (string)targetFrameworkAttribute.ConstructorArguments[0].Value;
         }
     }
 }
