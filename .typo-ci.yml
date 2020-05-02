@@ -14,7 +14,7 @@ excluded_words:
   - xaml
   - IntPtr
   - sln
-  - NetCoreCPro
+  - NetCoreCProj
   
 
 # Would you like filenames to also be spellchecked?
