@@ -58,14 +58,14 @@ namespace Dependencies.Analyser.Mono
 
             assembliesLoaded.Add(assemblyDefinition.Name, info);
 
-            if (assembly != null && (info.IsLocalAssembly || settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged)))
+            if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
                 info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
 
-                if (!info.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
+                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences))
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
 
-                if (settings.GetSettring<bool>(SettingKeys.ScanDllImport))
+                if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     AppendDllImportDll(info, assembly, baseDirectory);
             }
 
@@ -109,27 +109,21 @@ namespace Dependencies.Analyser.Mono
             }
             catch
             {
-                // do norting
+                // do nothing, assembly is not found
             }
 
             var info = new AssemblyInformation(assemblyName.Name, assembly?.Name.Version.ToString() ?? assemblyName.Version.ToString(), assemblyPath)
             {
                 IsLocalAssembly = assemblyPath != null || assembly == null,
-                AssemblyName = assembly?.FullName
+                AssemblyName = assembly?.FullName,
+                IsResolved = assembly != null,
+                HasEntryPoint = assembly?.EntryPoint != null
+                
             };
-
-            try
-            {
-                info.EnhancePropertiesWithFile();
-
-                if (assembly != null)
-                    info.EnhanceProperties(assembly);
-            }
-            catch
-            {
-                // no more informations
-            }
-
+            
+            info.EnhancePropertiesWithFile();
+            info.EnhanceProperties(assembly);
+            
             return (info, assembly);
         }
 

@@ -19,15 +19,26 @@ namespace Dependencies.Analyser.Mono.Extensions
 
         public static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition assembly)
         {
-            info.IsILOnly = (assembly.MainModule.Attributes & ModuleAttributes.ILOnly) == ModuleAttributes.ILOnly;
+            if (assembly == null)
+                return;
 
-            if (assembly.MainModule.Architecture == TargetArchitecture.I386 && info.IsILOnly) // This configuration is for any CPU...
-                info.TargetProcessor = TargetProcessor.AnyCpu;
-            else
-                info.TargetProcessor = TargetProcessorProvider[assembly.MainModule.Architecture];
+            try
+            {
+                info.IsILOnly = (assembly.MainModule.Attributes & ModuleAttributes.ILOnly) == ModuleAttributes.ILOnly;
 
-            info.IsDebug = assembly.GetIsDebugFlag();
-            info.TargetFramework = assembly.GetTargetFramework();
+                if (assembly.MainModule.Architecture == TargetArchitecture.I386 && info.IsILOnly) // This configuration is for any CPU...
+                    info.TargetProcessor = TargetProcessor.AnyCpu;
+                else
+                    info.TargetProcessor = TargetProcessorProvider[assembly.MainModule.Architecture];
+
+                info.IsDebug = assembly.GetIsDebugFlag();
+                info.TargetFramework = assembly.GetTargetFramework();
+            }
+            catch
+            {
+                // We keep information and skip error
+            }
+
         }
 
         public static bool? GetIsDebugFlag(this AssemblyDefinition assembly)

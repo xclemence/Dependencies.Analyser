@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Versioning;
 using Dependencies.Analyser.Base.Models;
 
 namespace Dependencies.Analyser.Microsoft.Extensions
@@ -22,54 +23,79 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             if (!info.IsLocalAssembly || !info.IsResolved)
                 return;
 
-            var fileInfo = new FileInfo(info.FilePath);
-            info.CreationDate = fileInfo.CreationTime;
-
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(info.FilePath);
-            info.Creator = fileVersionInfo.CompanyName;
-
-            if (string.IsNullOrEmpty(info.LoadedVersion))
-                info.LoadedVersion = fileVersionInfo.ProductVersion;
-
-            info.IsDebug = fileVersionInfo.IsDebug;
-
-            if (refModule != null)
+            try
             {
-                refModule.GetPEKind(out PortableExecutableKinds kind, out ImageFileMachine machine);
+                var fileInfo = new FileInfo(info.FilePath);
+                info.CreationDate = fileInfo.CreationTime;
 
-                if (machine == ImageFileMachine.I386 && kind == PortableExecutableKinds.ILOnly) // This configuration is for any CPU...
-                    info.TargetProcessor = TargetProcessor.AnyCpu;
-                else
-                    info.TargetProcessor = TargetProcessorProvider[machine];
+                var fileVersionInfo = FileVersionInfo.GetVersionInfo(info.FilePath);
+                info.Creator = fileVersionInfo.CompanyName;
 
-                info.IsILOnly = (kind & PortableExecutableKinds.ILOnly) == PortableExecutableKinds.ILOnly;
+                if (string.IsNullOrEmpty(info.LoadedVersion))
+                    info.LoadedVersion = fileVersionInfo.ProductVersion;
 
-                info.SetIsDebugFlag(refModule.Assembly);
+                info.IsDebug = fileVersionInfo.IsDebug;
+
+                if (refModule != null)
+                {
+                    refModule.GetPEKind(out PortableExecutableKinds kind, out ImageFileMachine machine);
+
+                    if (machine == ImageFileMachine.I386 && kind == PortableExecutableKinds.ILOnly) // This configuration is for any CPU...
+                        info.TargetProcessor = TargetProcessor.AnyCpu;
+                    else
+                        info.TargetProcessor = TargetProcessorProvider[machine];
+
+                    info.IsILOnly = (kind & PortableExecutableKinds.ILOnly) == PortableExecutableKinds.ILOnly;
+
+                    info.IsDebug = refModule.Assembly.GetIsDebugFlag();
+
+                    info.TargetFramework = refModule.Assembly.GetTargetFramework();
+
+                    info.HasEntryPoint = refModule.Assembly.EntryPoint != null;
+                }
             }
+            catch
+            {
+                // Do noting, leave properties found
+            }
+            
         }
 
-        public static void SetIsDebugFlag(this AssemblyInformation info, Assembly assembly)
+        public static bool? GetIsDebugFlag(this Assembly assembly)
         {
-            var debugAttribute = assembly.GetCustomAttributesData().SingleOrDefault(x => x.ToString().StartsWith("[System.Diagnostics.DebuggableAttribute"));
+            var debugAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == typeof(DebuggableAttribute).FullName);
 
-            if (debugAttribute == null) return;
+            if (debugAttribute == null) return null;
+
+            var isDebug = false;
 
             if (debugAttribute.ConstructorArguments.Count == 1)
             {
                 var mode = (DebuggableAttribute.DebuggingModes)debugAttribute.ConstructorArguments[0].Value;
 
-                info.IsDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
+                isDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
             }
             else
             {
-                info.IsDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
+                isDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
             }
 
             if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled))))
             {
                 var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled)));
-                info.IsDebug = !((bool)arg.TypedValue.Value);
+                isDebug = !((bool)arg.TypedValue.Value);
             }
+
+            return isDebug;
+        }
+
+        public static string GetTargetFramework(this Assembly assembly)
+        {
+            var targetFrameworkAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == typeof(TargetFrameworkAttribute).FullName);
+
+            if (targetFrameworkAttribute == null || targetFrameworkAttribute.ConstructorArguments.Count != 1) return string.Empty;
+
+            return (string)targetFrameworkAttribute.ConstructorArguments[0].Value;
         }
 
         public static string GetDllImportDllName(this MethodInfo method)
