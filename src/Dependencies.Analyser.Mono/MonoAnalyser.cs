@@ -109,27 +109,21 @@ namespace Dependencies.Analyser.Mono
             }
             catch
             {
-                // do norting
+                // do norting, assembly is not found
             }
 
             var info = new AssemblyInformation(assemblyName.Name, assembly?.Name.Version.ToString() ?? assemblyName.Version.ToString(), assemblyPath)
             {
                 IsLocalAssembly = assemblyPath != null || assembly == null,
-                AssemblyName = assembly?.FullName
+                AssemblyName = assembly?.FullName,
+                IsResolved = assembly != null,
+                HasEntryPoint = assembly?.EntryPoint != null
+                
             };
-
-            try
-            {
-                info.EnhancePropertiesWithFile();
-
-                if (assembly != null)
-                    info.EnhanceProperties(assembly);
-            }
-            catch
-            {
-                // no more informations
-            }
-
+            
+            info.EnhancePropertiesWithFile();
+            info.EnhanceProperties(assembly);
+            
             return (info, assembly);
         }
 
