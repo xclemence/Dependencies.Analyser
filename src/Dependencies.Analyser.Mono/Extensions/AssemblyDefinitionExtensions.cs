@@ -36,9 +36,9 @@ namespace Dependencies.Analyser.Mono.Extensions
             }
             catch
             {
-                // We keep informaiton and skeep error
+                // We keep information and skip error
             }
-            
+
         }
 
         public static bool? GetIsDebugFlag(this AssemblyDefinition assembly)

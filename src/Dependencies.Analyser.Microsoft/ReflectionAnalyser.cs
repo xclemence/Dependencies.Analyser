@@ -37,9 +37,6 @@ namespace Dependencies.Analyser.Microsoft
             try
             {
                 var directoryPath = Path.GetDirectoryName(dllPath);
-                var baseDirectory = new DirectoryInfo(directoryPath);
-
-                var allDirectories = baseDirectory.GetFiles("*qdqdsd.dll", SearchOption.AllDirectories).Select(x => x.FullName).ToList();
 
                 var runtimeAssemblies = ((string)AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
                 var resolver = new PathAssemblyResolver(runtimeAssemblies);
@@ -69,7 +66,7 @@ namespace Dependencies.Analyser.Microsoft
 
         private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
         {
-            if (!assembly.IsILOnly && settings.GetSettring<bool>(SettingKeys.ScanCliReferences))
+            if (!assembly.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences))
                 assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
 
 
@@ -109,11 +106,11 @@ namespace Dependencies.Analyser.Microsoft
 
             assembliesLoaded.Add(assemblyName.Name, info);
 
-            if (assembly != null && (info.IsLocalAssembly || settings.GetSettring<bool>(SettingKeys.ScanGlobalManaged)))
+            if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
                 info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(context, x, baseDirectory), x.Version.ToString())));
 
-                if (settings.GetSettring<bool>(SettingKeys.ScanDllImport))
+                if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
             }
 
