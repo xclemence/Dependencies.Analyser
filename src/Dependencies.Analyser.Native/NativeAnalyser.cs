@@ -76,6 +76,7 @@ namespace Dependencies.Analyser.Native
             {
                 IsNative = true,
                 IsLocalAssembly = !isSystem,
+                IsResolved = isSystem || filePath != null
             };
 
             info.EnhancePropertiesWithFile();
