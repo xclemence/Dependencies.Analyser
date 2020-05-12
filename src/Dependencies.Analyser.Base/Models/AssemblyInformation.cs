@@ -17,7 +17,7 @@ namespace Dependencies.Analyser.Base.Models
 
         public AssemblyInformation(string name,
                                    string loadedVersion,
-                                   string filePath)
+                                   string? filePath)
         {
             Name = name;
             LoadedVersion = loadedVersion;
@@ -28,7 +28,7 @@ namespace Dependencies.Analyser.Base.Models
         public string Name { get; set; }
         public string LoadedVersion { get; set; }
 
-        public string AssemblyName { get; set; }
+        public string? AssemblyName { get; set; }
 
         public bool IsLocalAssembly { get; set; }
 
@@ -38,46 +38,35 @@ namespace Dependencies.Analyser.Base.Models
 
         public string FullName => AssemblyName ?? Name;
 
-        public string FilePath { get; set; }
+        public string? FilePath { get; set; }
 
         public bool? IsDebug { get; set; }
 
         public bool IsILOnly { get; set; }
 
-        public string TargetFramework { get; set; }
+        public string? TargetFramework { get; set; }
 
         public bool HasEntryPoint { get; set; }
 
         public TargetProcessor? TargetProcessor { get; set; }
 
-        public string Creator { get; set; }
+        public string? Creator { get; set; }
 
         public DateTime CreationDate { get; set; }
 
         public List<AssemblyLink> Links { get; }
 
-        public override bool Equals(object obj) => Equals(obj as AssemblyInformation);
-
-        public bool Equals(AssemblyInformation other) =>
-            other != null &&
-            FullName == other.FullName &&
-            IsDebug == other.IsDebug &&
-            TargetFramework == other.TargetFramework &&
-            TargetProcessor == other.TargetProcessor;
-
-        public override int GetHashCode()
+        public override bool Equals(object? obj) => obj is AssemblyInformation information && Equals(information);
+        public bool Equals(AssemblyInformation other)
         {
-            var hashCode = 261209362;
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(FullName);
-            hashCode = hashCode * -1521134295 + IsDebug.GetHashCode();
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(TargetFramework);
-            hashCode = hashCode * -1521134295 + TargetProcessor.GetHashCode();
-            return hashCode;
+            return FullName == other.FullName && 
+                   IsDebug == other.IsDebug &&
+                   TargetFramework == other.TargetFramework &&
+                   TargetProcessor == other.TargetProcessor;
         }
+        public override int GetHashCode() => HashCode.Combine(FullName, IsDebug, TargetFramework, TargetProcessor);
 
-        public static bool operator ==(AssemblyInformation information1, AssemblyInformation information2) =>
-            EqualityComparer<AssemblyInformation>.Default.Equals(information1, information2);
-
-        public static bool operator !=(AssemblyInformation information1, AssemblyInformation information2) => !(information1 == information2);
+        public static bool operator ==(AssemblyInformation? left, AssemblyInformation? right) => EqualityComparer<AssemblyInformation?>.Default.Equals(left, right);
+        public static bool operator !=(AssemblyInformation? left, AssemblyInformation? right) => !(left == right);
     }
 }

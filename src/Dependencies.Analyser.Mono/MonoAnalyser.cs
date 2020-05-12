@@ -32,12 +32,15 @@ namespace Dependencies.Analyser.Mono
             return assembly.RemoveChildenLoop();
         }
 
-        public AssemblyInformation LoadManagedAssembly(string entryDll)
+        public AssemblyInformation? LoadManagedAssembly(string entryDll)
         {
             try
             {
                 var fileInfo = new FileInfo(entryDll);
                 var baseDirectory = Path.GetDirectoryName(entryDll);
+
+                if (baseDirectory == null)
+                    return null;
 
                 var assembly = AssemblyDefinition.ReadAssembly(entryDll);
 
@@ -62,7 +65,7 @@ namespace Dependencies.Analyser.Mono
             {
                 info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
 
-                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences))
+                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
 
                 if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
@@ -85,11 +88,11 @@ namespace Dependencies.Analyser.Mono
             }
         }
 
-        private static (AssemblyInformation info, AssemblyDefinition assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string baseDirectory, string extension = "dll")
+        private static (AssemblyInformation info, AssemblyDefinition? assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string? baseDirectory, string extension = "dll")
         {
             var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 
-            AssemblyDefinition assembly = null;
+            AssemblyDefinition? assembly = null;
             try
             {
                 using var resolver = new DefaultAssemblyResolver();

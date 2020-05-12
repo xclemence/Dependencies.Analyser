@@ -5,10 +5,8 @@ using System.Diagnostics;
 namespace Dependencies.Analyser.Base.Models
 {
     [DebuggerDisplay("Assembly = {Assembly.Name}, Version = {LinkVersion}")]
-    public class AssemblyLink : MarshalByRefObject, IEquatable<AssemblyLink>
+    public class AssemblyLink : IEquatable<AssemblyLink>
     {
-        public AssemblyLink() { }
-
         public AssemblyLink(AssemblyInformation assembly, string linkVersion, string linkFullName)
         {
             Assembly = assembly;
@@ -22,25 +20,11 @@ namespace Dependencies.Analyser.Base.Models
 
         public string LinkFullName { get; set; }
 
-        public override bool Equals(object obj) => Equals(obj as AssemblyLink);
+        public override bool Equals(object? obj) => obj is AssemblyLink link && Equals(link);
+        public bool Equals(AssemblyLink other) => EqualityComparer<AssemblyInformation>.Default.Equals(Assembly, other.Assembly) && LinkFullName == other.LinkFullName;
+        public override int GetHashCode() => HashCode.Combine(Assembly, LinkFullName);
 
-        public bool Equals(AssemblyLink other)
-        {
-            return other != null &&
-                   EqualityComparer<AssemblyInformation>.Default.Equals(Assembly, other.Assembly) &&
-                   LinkVersion == other.LinkVersion;
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = 320259904;
-            hashCode = hashCode * -1521134295 + EqualityComparer<AssemblyInformation>.Default.GetHashCode(Assembly);
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(LinkVersion);
-            return hashCode;
-        }
-
-        public static bool operator ==(AssemblyLink link1, AssemblyLink link2) => EqualityComparer<AssemblyLink>.Default.Equals(link1, link2);
-
-        public static bool operator !=(AssemblyLink link1, AssemblyLink link2) => !(link1 == link2);
+        public static bool operator ==(AssemblyLink? left, AssemblyLink? right) => EqualityComparer<AssemblyLink?>.Default.Equals(left, right);
+        public static bool operator !=(AssemblyLink? left, AssemblyLink? right) => !(left == right);
     }
 }

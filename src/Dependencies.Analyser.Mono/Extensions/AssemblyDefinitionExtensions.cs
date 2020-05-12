@@ -17,7 +17,7 @@ namespace Dependencies.Analyser.Mono.Extensions
         };
 
 
-        internal static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition assembly)
+        internal static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition? assembly)
         {
             if (assembly == null)
                 return;
@@ -84,7 +84,7 @@ namespace Dependencies.Analyser.Mono.Extensions
                                           .SelectMany(x => x.Methods)
                                           .Where(x => x.IsStatic && x.IsPInvokeImpl && x.IsPreserveSig)
                                           .Select(x => x.PInvokeInfo?.Module?.Name)
-                                          .Where(x => !string.IsNullOrEmpty(x))
+                                          .OfType<string>()
                                           .Distinct();
 
             return externalLibNames;

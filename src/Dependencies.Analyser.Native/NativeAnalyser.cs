@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Dependencies.Analyser.Base;
@@ -20,13 +21,13 @@ namespace Dependencies.Analyser.Native
         public NativeAnalyser(ISettingProvider setting)
         {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();
-            scanGlobalAssemblies = setting.GetSetting<bool>(SettingKeys.ScanGlobalNative);
+            scanGlobalAssemblies = setting?.GetSetting<bool>(SettingKeys.ScanGlobalNative) ?? false;
 
             var apiMapProvider = new ApiSetMapProviderInterop();
             var baseMap = apiMapProvider.GetApiSetMap();
 
             windowsApiMap = baseMap.Select(x => (key: x.Key, target: x.Value.FirstOrDefault(a => string.IsNullOrEmpty(a.alias)).name))
-                                    .ToDictionary(x => $"{x.key.ToLower()}.dll", x => x.target);
+                                    .ToDictionary(x => $"{x.key.ToUpperInvariant()}.dll", x => x.target);
         }
 
         public AssemblyInformation LoadNativeAssembly(string entryDll)
@@ -46,7 +47,7 @@ namespace Dependencies.Analyser.Native
             return fileName;
         }
 
-        private (string file, string filePath, bool isSystem) GetFilePath(string fileName, string baseDirectory)
+        private (string file, string? filePath, bool isSystem) GetFilePath(string fileName, string? baseDirectory)
         {
             var file = fileName;
             var filePath = GetAssemblyPath(fileName, baseDirectory);
@@ -70,7 +71,7 @@ namespace Dependencies.Analyser.Native
             return (file, filePath, isSystem);
         }
 
-        private AssemblyInformation CreateNativeAssemblyInformation(string fileName, string filePath, bool isSystem)
+        private static AssemblyInformation CreateNativeAssemblyInformation(string fileName, string? filePath, bool isSystem)
         {
             var info = new AssemblyInformation(fileName, null, filePath)
             {
@@ -84,9 +85,12 @@ namespace Dependencies.Analyser.Native
             return info;
         }
 
-        private string GetAssemblyPath(string fileName, string baseDirectory)
+        private static string? GetAssemblyPath(string fileName, string? baseDirectory)
         {
-            if (!fileName.EndsWith(".dll"))
+            if (baseDirectory == null)
+                return null;
+
+            if (!fileName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase))
                 fileName = $"{ fileName }.dll";
             var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
 
@@ -95,7 +99,9 @@ namespace Dependencies.Analyser.Native
 
         public IEnumerable<AssemblyLink> GetNativeLinks(string file, string baseDirectory)
         {
-            var referencedDlls = PeFile.GetImportedPeFile(file)
+            var peFile = new PeFile(file);
+
+            var referencedDlls = peFile.ImportedFunctions
                                        .Select(x => GetFilePath(x.DLL, baseDirectory))
                                        .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
                                        .Distinct()
@@ -113,19 +119,21 @@ namespace Dependencies.Analyser.Native
             return new AssemblyLink(assembly, assembly.LoadedVersion, assembly.FullName);
         }
 
-        public AssemblyInformation GetNative(string fileName, string filePath, bool isSystem, string baseDirectory)
+        public AssemblyInformation GetNative(string fileName, string? filePath, bool isSystem, string? baseDirectory)
         {
-            if (assembliesLoaded.TryGetValue(fileName.ToLower(), out var assemblyFound))
+            if (assembliesLoaded.TryGetValue(fileName.ToUpperInvariant(), out var assemblyFound))
                 return assemblyFound;
 
             var info = CreateNativeAssemblyInformation(fileName, filePath, isSystem);
-            assembliesLoaded.Add(fileName.ToLower(), info);
+            assembliesLoaded.Add(fileName.ToUpperInvariant(), info);
 
             if (info.IsResolved)
             {
-                var referencedDlls = PeFile.GetImportedPeFile(info.FilePath).Select(x => x.DLL).Distinct().ToList();
+                var peFile = new PeFile(info.FilePath);
 
-                info.TargetProcessor = PeFile.Is64BitPeFile(info.FilePath) ? TargetProcessor.x64 : TargetProcessor.x86;
+                var referencedDlls = peFile.ImportedFunctions.Select(x => x.DLL).Distinct().ToList();
+
+                info.TargetProcessor = peFile.Is64Bit ? TargetProcessor.x64 : TargetProcessor.x86;
 
                 if (scanGlobalAssemblies || info.IsLocalAssembly)
                 {
