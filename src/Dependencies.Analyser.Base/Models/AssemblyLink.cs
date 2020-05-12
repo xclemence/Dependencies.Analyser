@@ -7,7 +7,7 @@ namespace Dependencies.Analyser.Base.Models
     [DebuggerDisplay("Assembly = {Assembly.Name}, Version = {LinkVersion}")]
     public class AssemblyLink : IEquatable<AssemblyLink>
     {
-        public AssemblyLink(AssemblyInformation assembly, string linkVersion, string linkFullName)
+        public AssemblyLink(AssemblyInformation assembly, string? linkVersion, string linkFullName)
         {
             Assembly = assembly;
             LinkVersion = linkVersion;
@@ -16,7 +16,7 @@ namespace Dependencies.Analyser.Base.Models
 
         public AssemblyInformation Assembly { get; set; }
 
-        public string LinkVersion { get; set; }
+        public string? LinkVersion { get; set; }
 
         public string LinkFullName { get; set; }
 

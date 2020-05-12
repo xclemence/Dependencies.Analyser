@@ -127,7 +127,7 @@ namespace Dependencies.Analyser.Native
             var info = CreateNativeAssemblyInformation(fileName, filePath, isSystem);
             assembliesLoaded.Add(fileName.ToUpperInvariant(), info);
 
-            if (info.IsResolved)
+            if (info.IsResolved && info.FilePath != null)
             {
                 var peFile = new PeFile(info.FilePath);
 

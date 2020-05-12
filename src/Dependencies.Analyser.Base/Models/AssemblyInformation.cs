@@ -16,7 +16,7 @@ namespace Dependencies.Analyser.Base.Models
     {
 
         public AssemblyInformation(string name,
-                                   string loadedVersion,
+                                   string? loadedVersion,
                                    string? filePath)
         {
             Name = name;
@@ -26,7 +26,7 @@ namespace Dependencies.Analyser.Base.Models
         }
 
         public string Name { get; set; }
-        public string LoadedVersion { get; set; }
+        public string? LoadedVersion { get; set; }
 
         public string? AssemblyName { get; set; }
 
