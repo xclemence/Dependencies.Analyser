@@ -69,9 +69,9 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
             var isDebug = false;
 
-            if (debugAttribute.ConstructorArguments.Count == 1)
+            if (debugAttribute.ConstructorArguments.Count == 1 && debugAttribute.ConstructorArguments[0].Value is int value)
             {
-                var mode = debugAttribute.ConstructorArguments[0].Value as DebuggableAttribute.DebuggingModes?;
+                var mode = (DebuggableAttribute.DebuggingModes)value;
 
                 isDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
             }
