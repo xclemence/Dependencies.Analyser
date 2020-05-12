@@ -131,13 +131,13 @@ namespace Dependencies.Analyser.Native
             {
                 var peFile = new PeFile(info.FilePath);
 
-                var referencedDlls = peFile.ImportedFunctions.Select(x => x.DLL).Distinct().ToList();
+                var referencedAssemblyFiles = peFile.ImportedFunctions.Select(x => x.DLL).Distinct().ToList();
 
                 info.TargetProcessor = peFile.Is64Bit ? TargetProcessor.x64 : TargetProcessor.x86;
 
                 if (scanGlobalAssemblies || info.IsLocalAssembly)
                 {
-                    info.Links.AddRange(referencedDlls.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
+                    info.Links.AddRange(referencedAssemblyFiles.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
                     {
                         var native = GetNative(x.file, x.filePath, x.isSystem, baseDirectory);
                         return new AssemblyLink(native, native.LoadedVersion, native.FullName);
