@@ -10,6 +10,9 @@ namespace Dependencies.Analyser.Base.Extensions
     {
         public static void EnhancePropertiesWithFile(this AssemblyInformation info)
         {
+            if (info is null)
+                throw new System.ArgumentNullException(nameof(info));
+
             if (!info.IsLocalAssembly || !info.IsResolved)
                 return;
 
@@ -31,6 +34,9 @@ namespace Dependencies.Analyser.Base.Extensions
 
         public static IEnumerable<AssemblyLink> GetAllLinks(this AssemblyInformation assembly)
         {
+            if (assembly is null)
+                throw new System.ArgumentNullException(nameof(assembly));
+
             foreach (var item in assembly.Links)
             {
                 yield return item;
@@ -42,8 +48,11 @@ namespace Dependencies.Analyser.Base.Extensions
 
         public static AssemblyInformation RemoveChildenLoop(this AssemblyInformation assembly)
         {
+            if (assembly is null)
+                throw new System.ArgumentNullException(nameof(assembly));
+
             var path = new List<AssemblyInformation> { assembly };
-            assembly.Links = assembly.Links.Where(x => x.Assembly.RemoveChildenLoop(path)).ToList();
+            assembly.Links.AddRange(assembly.Links.Where(x => x.Assembly.RemoveChildenLoop(path)));
             return assembly;
         }
 
@@ -56,7 +65,7 @@ namespace Dependencies.Analyser.Base.Extensions
 
             currentPath.Add(assembly);
 
-            assembly.Links = assembly.Links.Where(x => RemoveChildenLoop(x.Assembly, currentPath)).ToList();
+            assembly.Links.AddRange(assembly.Links.Where(x => RemoveChildenLoop(x.Assembly, currentPath)));
 
             return true;
         }

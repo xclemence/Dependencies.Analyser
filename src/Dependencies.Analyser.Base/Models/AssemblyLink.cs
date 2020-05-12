@@ -22,10 +22,7 @@ namespace Dependencies.Analyser.Base.Models
 
         public string LinkFullName { get; set; }
 
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as AssemblyLink);
-        }
+        public override bool Equals(object obj) => Equals(obj as AssemblyLink);
 
         public bool Equals(AssemblyLink other)
         {
@@ -42,14 +39,8 @@ namespace Dependencies.Analyser.Base.Models
             return hashCode;
         }
 
-        public static bool operator ==(AssemblyLink link1, AssemblyLink link2)
-        {
-            return EqualityComparer<AssemblyLink>.Default.Equals(link1, link2);
-        }
+        public static bool operator ==(AssemblyLink link1, AssemblyLink link2) => EqualityComparer<AssemblyLink>.Default.Equals(link1, link2);
 
-        public static bool operator !=(AssemblyLink link1, AssemblyLink link2)
-        {
-            return !(link1 == link2);
-        }
+        public static bool operator !=(AssemblyLink link1, AssemblyLink link2) => !(link1 == link2);
     }
 }

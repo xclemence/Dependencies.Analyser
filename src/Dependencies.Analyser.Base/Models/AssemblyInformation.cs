@@ -14,7 +14,7 @@ namespace Dependencies.Analyser.Base.Models
     [DebuggerDisplay("Name = {Name}, Loaded Version = {LoadedVersion}, Local= {IsLocalAssembly}, Resolved={IsResolved} , Links = {Links.Count}")]
     public class AssemblyInformation : IEquatable<AssemblyInformation>
     {
-    
+
         public AssemblyInformation(string name,
                                    string loadedVersion,
                                    string filePath)
@@ -25,7 +25,7 @@ namespace Dependencies.Analyser.Base.Models
             FilePath = filePath;
         }
 
-        public string Name { get; set;  }
+        public string Name { get; set; }
         public string LoadedVersion { get; set; }
 
         public string AssemblyName { get; set; }
@@ -43,7 +43,7 @@ namespace Dependencies.Analyser.Base.Models
         public bool? IsDebug { get; set; }
 
         public bool IsILOnly { get; set; }
-        
+
         public string TargetFramework { get; set; }
 
         public bool HasEntryPoint { get; set; }
@@ -54,11 +54,11 @@ namespace Dependencies.Analyser.Base.Models
 
         public DateTime CreationDate { get; set; }
 
-        public List<AssemblyLink> Links { get; set; }
+        public List<AssemblyLink> Links { get; }
 
         public override bool Equals(object obj) => Equals(obj as AssemblyInformation);
 
-        public bool Equals(AssemblyInformation other) => 
+        public bool Equals(AssemblyInformation other) =>
             other != null &&
             FullName == other.FullName &&
             IsDebug == other.IsDebug &&
@@ -75,7 +75,7 @@ namespace Dependencies.Analyser.Base.Models
             return hashCode;
         }
 
-        public static bool operator ==(AssemblyInformation information1, AssemblyInformation information2) => 
+        public static bool operator ==(AssemblyInformation information1, AssemblyInformation information2) =>
             EqualityComparer<AssemblyInformation>.Default.Equals(information1, information2);
 
         public static bool operator !=(AssemblyInformation information1, AssemblyInformation information2) => !(information1 == information2);

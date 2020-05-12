@@ -25,7 +25,7 @@ namespace Dependencies.Analyser.Native
             var apiMapProvider = new ApiSetMapProviderInterop();
             var baseMap = apiMapProvider.GetApiSetMap();
 
-            windowsApiMap = baseMap.Select(x => (key: x.Key,  target: x.Value.FirstOrDefault(a => string.IsNullOrEmpty(a.alias)).name))
+            windowsApiMap = baseMap.Select(x => (key: x.Key, target: x.Value.FirstOrDefault(a => string.IsNullOrEmpty(a.alias)).name))
                                     .ToDictionary(x => $"{x.key.ToLower()}.dll", x => x.target);
         }
 
@@ -35,12 +35,12 @@ namespace Dependencies.Analyser.Native
             var baseDirectory = Path.GetDirectoryName(entryDll);
 
             var (file, filePath, isSystem) = GetFilePath(fileInfo.Name, baseDirectory);
-            return GetNative(file, filePath, isSystem, baseDirectory); 
+            return GetNative(file, filePath, isSystem, baseDirectory);
         }
 
         private string GetSystemFile(string fileName)
         {
-            if (windowsApiMap.TryGetValue(fileName, out string file))
+            if (windowsApiMap.TryGetValue(fileName, out var file))
                 return file;
 
             return fileName;
@@ -58,7 +58,7 @@ namespace Dependencies.Analyser.Native
 
                 var system32Path = Environment.SystemDirectory;
 
-                var  testedPath = Path.Combine(system32Path, file);
+                var testedPath = Path.Combine(system32Path, file);
 
                 if (File.Exists(testedPath))
                 {

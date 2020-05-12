@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Dependencies.Analyser.Base
+﻿namespace Dependencies.Analyser.Base
 {
     public interface IAssemblyAnalyserFactory
     {

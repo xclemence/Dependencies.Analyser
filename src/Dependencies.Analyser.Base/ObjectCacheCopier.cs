@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,40 +8,40 @@ namespace Dependencies.Analyser.Base
     {
         private readonly IDictionary<Type, IDictionary<dynamic, dynamic>> caches;
 
-        public ObjectCacheTransformer()
-        {
-            caches = new Dictionary<Type, IDictionary<dynamic, dynamic>>();
-        }
+        public ObjectCacheTransformer() => caches = new Dictionary<Type, IDictionary<dynamic, dynamic>>();
 
-        public To Transform<From, To>(From obj, Func<From, To> transform)
+        public TTo Transform<TFrom, TTo>(TFrom item, Func<TFrom, TTo> transform)
         {
-            var type = typeof(From);
+            if (transform is null)
+                throw new ArgumentNullException(nameof(transform));
 
-            if (!caches.TryGetValue(type, out IDictionary<dynamic, dynamic> typeCahe))
+            var type = typeof(TFrom);
+
+            if (!caches.TryGetValue(type, out var typeCahe))
             {
                 typeCahe = new Dictionary<dynamic, dynamic>();
                 caches.Add(type, typeCahe);
             }
 
-            if(!typeCahe.TryGetValue(obj, out dynamic value))
+            if (!typeCahe.TryGetValue(item, out var value))
             {
-                value = transform(obj);
-                typeCahe.Add(obj, value);
+                value = transform(item);
+                typeCahe.Add(item, value);
             }
 
             return value;
         }
 
-        public IEnumerable<To> GetCacheItems<From, To>()
+        public IEnumerable<TTo> GetCacheItems<TFrom, TTo>()
         {
-            var type = typeof(From);
+            var type = typeof(TFrom);
 
-            if (!caches.TryGetValue(type, out IDictionary<dynamic, dynamic> typeCahe))
+            if (!caches.TryGetValue(type, out var typeCahe))
             {
-                return Enumerable.Empty<To>();
+                return Enumerable.Empty<TTo>();
             }
 
-            return typeCahe.Values.OfType<To>();
+            return typeCahe.Values.OfType<TTo>();
         }
     }
 }

@@ -38,7 +38,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
                 if (refModule != null)
                 {
-                    refModule.GetPEKind(out PortableExecutableKinds kind, out ImageFileMachine machine);
+                    refModule.GetPEKind(out var kind, out var machine);
 
                     if (machine == ImageFileMachine.I386 && kind == PortableExecutableKinds.ILOnly) // This configuration is for any CPU...
                         info.TargetProcessor = TargetProcessor.AnyCpu;
@@ -58,7 +58,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             {
                 // Do noting, leave properties found
             }
-            
+
         }
 
         public static bool? GetIsDebugFlag(this Assembly assembly)
@@ -80,9 +80,9 @@ namespace Dependencies.Analyser.Microsoft.Extensions
                 isDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
             }
 
-            if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled))))
+            if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture)))
             {
-                var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled)));
+                var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture));
                 isDebug = !((bool)arg.TypedValue.Value);
             }
 
@@ -100,7 +100,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
         public static string GetDllImportDllName(this MethodInfo method)
         {
-            var attribute = method.GetCustomAttributesData().FirstOrDefault(x => x.ToString().StartsWith("[System.Runtime.InteropServices.DllImportAttribute"));
+            var attribute = method.GetCustomAttributesData().FirstOrDefault(x => x.ToString().StartsWith("[System.Runtime.InteropServices.DllImportAttribute", StringComparison.InvariantCulture));
 
             if (attribute == null)
                 return null;
