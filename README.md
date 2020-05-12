@@ -2,29 +2,34 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Build Status][build-status-badge]][build-status-url]
 
-This repository contains analyzers for assemblies dependencies. All analyzers in this repository support **.Net Core 3.1**.
+This repository contains analysers for assemblies dependencies. All analysers in this repository support **.Net Core 3.1**.
 
 ## Global features:
-- Scan managed Assemblies (C#)
-- Scan native Assemblies (C++)
-- Support CLI/C++ Assemblies
-- Support Dll import for mix assemblies (native and managed)
+- Managed Assemblies scan (C#)
+- Native Assemblies scan (C++)
+- CLI/C++ Assemblies scan
+- Mix assmblies scan (only C# -> C++)
+- Read Windows Api set map (for native assemblies)
 
-## Analyzers
+## analysers
 
-### Native analyzer
+### Native analyser
 
-The native analyzer support C++ and CLI/C++ assembly files. It uses [PeNet][penet-project] to read Pe file and find native dependencies
+The native analyser support C++ and CLI/C++ assembly files. It uses [PeNet][penet-project] to read Pe file and find native dependencies.
 
-All other analyzers use this analyzer for the native part.
+Windows 7 introduce a *proxy* mechanism for assemblies.  this mechanism is called Api Set. the goal is to provide architectural separation between an API contract (reference in assembly) and the associated implementation (dll). So when a Windows reference is found, we need to check in Api Set to find the corresponded dll.
 
-### Mono analyzer
+The native analyser provides an implementation for Api Set V6 (Windows 10).
 
-This analyzer uses [Mono Cecil][mono-cecil-project] to read .Net assemblies and find all dependencies.
+All other analysers use this analyser for the native part.
 
-### Microsoft analyzer
+### Mono analyser
 
-This analyzer used the new net core feature to load assemblies in a specific context and MetadataLoadContext to load only assembly metadata.
+This analyser uses [Mono Cecil][mono-cecil-project] to read .Net assemblies and find all dependencies.
+
+### Microsoft analyser
+
+This analyser used the new net core feature to load assemblies in a specific context and MetadataLoadContext to load only assembly metadata.
 
 With these tools, we can load assembly in an isolated context and avoid host application alteration.
 
