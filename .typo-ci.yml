@@ -7,6 +7,9 @@ excluded_files:
   - "**/bin/**/*"
   - "**/obj/**/*"
   - ".typo-ci.yml"
+  - ".typo-ci.yml"
+  - "**/*.vcxproj"
+  - "**/.editorconfig"
 
 # Any typos we should ignore?
 excluded_words:
@@ -15,6 +18,8 @@ excluded_words:
   - IntPtr
   - sln
   - NetCoreCProj
+  - Dll
+  - penet-project
   
 
 # Would you like filenames to also be spellchecked?
