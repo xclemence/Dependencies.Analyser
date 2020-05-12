@@ -29,7 +29,7 @@ namespace Dependencies.Analyser.Mono
         private AssemblyInformation LoadAssembly(string dllPath)
         {
             var assembly = LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath);
-            return assembly.RemoveChildenLoop();
+            return assembly.RemoveChildrenLoop();
         }
 
         public AssemblyInformation? LoadManagedAssembly(string entryDll)

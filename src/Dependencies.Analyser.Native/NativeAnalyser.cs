@@ -101,13 +101,13 @@ namespace Dependencies.Analyser.Native
         {
             var peFile = new PeFile(file);
 
-            var referencedDlls = peFile.ImportedFunctions
+            var referencedFiles = peFile.ImportedFunctions
                                        .Select(x => GetFilePath(x.DLL, baseDirectory))
                                        .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
                                        .Distinct()
                                        .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
-            foreach (var item in referencedDlls)
+            foreach (var item in referencedFiles)
                 yield return new AssemblyLink(item, item.LoadedVersion, item.FullName);
         }
 

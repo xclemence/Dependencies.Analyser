@@ -46,7 +46,7 @@ namespace Dependencies.Analyser.Base.Extensions
             }
         }
 
-        public static AssemblyInformation RemoveChildenLoop(this AssemblyInformation assembly)
+        public static AssemblyInformation RemoveChildrenLoop(this AssemblyInformation assembly)
         {
             if (assembly is null)
                 throw new System.ArgumentNullException(nameof(assembly));

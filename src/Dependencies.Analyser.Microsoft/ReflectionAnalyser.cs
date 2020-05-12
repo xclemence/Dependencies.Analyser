@@ -30,7 +30,7 @@ namespace Dependencies.Analyser.Microsoft
         }
 
         public async Task<AssemblyInformation> AnalyseAsync(string dllPath) =>
-            await Task.Run(() => LoadAssembly(dllPath).RemoveChildenLoop()).ConfigureAwait(false);
+            await Task.Run(() => LoadAssembly(dllPath).RemoveChildrenLoop()).ConfigureAwait(false);
 
         private AssemblyInformation LoadAssembly(string dllPath)
         {
