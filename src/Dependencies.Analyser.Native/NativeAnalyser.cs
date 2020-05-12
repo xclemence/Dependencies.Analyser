@@ -17,7 +17,6 @@ namespace Dependencies.Analyser.Native
         private readonly IDictionary<string, string> windowsApiMap;
         private readonly bool scanGlobalAssemblies;
 
-
         public NativeAnalyser(ISettingProvider setting)
         {
             assembliesLoaded = new Dictionary<string, AssemblyInformation>();

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Dependencies.Analyser.Native.UnitTests": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
