@@ -52,14 +52,14 @@ namespace Dependencies.Analyser.Base.Extensions
                 throw new System.ArgumentNullException(nameof(assembly));
 
             var path = new List<AssemblyInformation> { assembly };
-            var newDependencies = assembly.Links.Where(x => x.Assembly.RemoveChildeenLoop(path)).ToList();
+            var newDependencies = assembly.Links.Where(x => x.Assembly.RemoveChildrenLoop(path)).ToList();
 
             assembly.Links.Clear();
             assembly.Links.AddRange(newDependencies);
             return assembly;
         }
 
-        private static bool RemoveChildeenLoop(this AssemblyInformation assembly, IEnumerable<AssemblyInformation> path)
+        private static bool RemoveChildrenLoop(this AssemblyInformation assembly, IEnumerable<AssemblyInformation> path)
         {
             var currentPath = path.ToList();
 
@@ -68,7 +68,7 @@ namespace Dependencies.Analyser.Base.Extensions
 
             currentPath.Add(assembly);
 
-            var newDependencies = assembly.Links.Where(x => RemoveChildeenLoop(x.Assembly, currentPath)).ToList();
+            var newDependencies = assembly.Links.Where(x => RemoveChildrenLoop(x.Assembly, currentPath)).ToList();
 
             assembly.Links.Clear();
             assembly.Links.AddRange(newDependencies);
