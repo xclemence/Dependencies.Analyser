@@ -1,6 +1,6 @@
 ﻿namespace Dependencies.Analyser.Base
 {
-    public class SettingKeys
+    public static class SettingKeys
     {
         public static string SelectedAnalyserCode => "SelectedAnalyserCode";
         public static string ScanGlobalNative => "ScanGlobalNative";

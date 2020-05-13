@@ -17,7 +17,7 @@ namespace Dependencies.Analyser.Mono.Extensions
         };
 
 
-        public static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition assembly)
+        internal static void EnhanceProperties(this AssemblyInformation info, AssemblyDefinition? assembly)
         {
             if (assembly == null)
                 return;
@@ -41,13 +41,13 @@ namespace Dependencies.Analyser.Mono.Extensions
 
         }
 
-        public static bool? GetIsDebugFlag(this AssemblyDefinition assembly)
+        internal static bool? GetIsDebugFlag(this AssemblyDefinition assembly)
         {
             var debugAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == "System.Diagnostics.DebuggableAttribute");
 
             if (debugAttribute == null) return null;
 
-            var isDebug = false;    
+            var isDebug = false;
 
             if (debugAttribute.ConstructorArguments.Count == 1)
             {
@@ -60,22 +60,34 @@ namespace Dependencies.Analyser.Mono.Extensions
                 isDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
             }
 
-            if (debugAttribute.Properties.Any(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled))))
+            if (debugAttribute.Properties.Any(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture)))
             {
-                var arg = debugAttribute.Properties.SingleOrDefault(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled)));
+                var arg = debugAttribute.Properties.SingleOrDefault(x => x.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture));
                 isDebug = !((bool)arg.Argument.Value);
             }
 
             return isDebug;
         }
 
-        public static string GetTargetFramework(this AssemblyDefinition assembly)
+        internal static string GetTargetFramework(this AssemblyDefinition assembly)
         {
             var targetFrameworkAttribute = assembly.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == "System.Runtime.Versioning.TargetFrameworkAttribute");
 
             if (targetFrameworkAttribute == null || targetFrameworkAttribute.ConstructorArguments.Count != 1) return string.Empty;
 
             return (string)targetFrameworkAttribute.ConstructorArguments[0].Value;
+        }
+
+        internal static IEnumerable<string> GetDllImportValues(this AssemblyDefinition assembly)
+        {
+            var externalLibNames = assembly.Modules.SelectMany(x => x.Types)
+                                          .SelectMany(x => x.Methods)
+                                          .Where(x => x.IsStatic && x.IsPInvokeImpl && x.IsPreserveSig)
+                                          .Select(x => x.PInvokeInfo?.Module?.Name)
+                                          .OfType<string>()
+                                          .Distinct();
+
+            return externalLibNames;
         }
     }
 }

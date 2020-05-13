@@ -6,10 +6,7 @@ namespace Dependencies.Analyser.Microsoft
     {
         private readonly IAnalyserServiceFactory<ReflectionAnalyser> serviceFactory;
 
-        public ReflectionAnalyserFactory(IAnalyserServiceFactory<ReflectionAnalyser> serviceFactory)
-        {
-            this.serviceFactory = serviceFactory;
-        }
+        public ReflectionAnalyserFactory(IAnalyserServiceFactory<ReflectionAnalyser> serviceFactory) => this.serviceFactory = serviceFactory;
 
         public string Name => "Microsoft";
         public string Code => "Microsoft";

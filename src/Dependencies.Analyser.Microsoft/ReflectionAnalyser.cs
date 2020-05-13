@@ -18,7 +18,7 @@ namespace Dependencies.Analyser.Microsoft
 
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
         private readonly IDictionary<string, IList<string>> dllImportReferences;
-    
+
 
         public ReflectionAnalyser(INativeAnalyser nativeAnalyser, ISettingProvider settings)
         {
@@ -29,8 +29,8 @@ namespace Dependencies.Analyser.Microsoft
             dllImportReferences = new Dictionary<string, IList<string>>();
         }
 
-        public async Task<AssemblyInformation> AnalyseAsync(string dllPath) => 
-            await Task.Run(() => LoadAssembly(dllPath).RemoveChildenLoop()).ConfigureAwait(false);
+        public async Task<AssemblyInformation> AnalyseAsync(string dllPath) =>
+            await Task.Run(() => LoadAssembly(dllPath).RemoveChildrenLoop()).ConfigureAwait(false);
 
         private AssemblyInformation LoadAssembly(string dllPath)
         {
@@ -38,13 +38,11 @@ namespace Dependencies.Analyser.Microsoft
             {
                 var directoryPath = Path.GetDirectoryName(dllPath);
 
-                var runtimeAssemblies = ((string)AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
-                var resolver = new PathAssemblyResolver(runtimeAssemblies);
+                var assembly = LoadManagedAssembly(dllPath);
 
-                using var context = new MetadataLoadContext(resolver);
-                var assembly = LoadAssembly(context, dllPath);
+                if(directoryPath != null)
+                    AnalyseNativeAssemblies(assembly, directoryPath);
 
-                AnalyseNativeAssemblies(assembly, directoryPath);
                 return assembly;
 
             }
@@ -60,17 +58,17 @@ namespace Dependencies.Analyser.Microsoft
 
             var subAssemblies = info.GetAllLinks().Select(x => x.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
 
-            foreach(var assembly in subAssemblies)
+            foreach (var assembly in subAssemblies)
                 LoadNativeReferences(assembly, baseDirectory);
         }
 
         private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
         {
-            if (!assembly.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences))
+            if (!assembly.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && assembly.FilePath != null)
                 assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
 
 
-            if(dllImportReferences.TryGetValue(assembly.FullName, out IList<string> references))
+            if (dllImportReferences.TryGetValue(assembly.FullName, out var references))
                 LoadDllImportRefrences(assembly, baseDirectory, references);
         }
 
@@ -80,26 +78,38 @@ namespace Dependencies.Analyser.Microsoft
             {
                 var link = nativeAnalyser.GetNativeLink(item, baseDirectory);
 
-                if(!assembly.Links.Contains(link))
+                if (!assembly.Links.Contains(link))
                     assembly.Links.Add(link);
             }
         }
 
 
-        public AssemblyInformation LoadAssembly(MetadataLoadContext context, string entryDll)
+        private AssemblyInformation LoadManagedAssembly(string entryDll)
         {
+
             var fileInfo = new FileInfo(entryDll);
-            var baseDirectory = Path.GetDirectoryName(entryDll);
+            var directoryPath = Path.GetDirectoryName(entryDll);
 
-            Assembly assembly = context.LoadFromAssemblyPath(entryDll);
+            if (directoryPath == null)
+                throw new FileNotFoundException(entryDll);
 
-            return GetManaged(context, assembly.GetName(), baseDirectory, fileInfo.Extension.Replace(".", ""));
+            var runtimeAssemblies = (AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string)?.Split(Path.PathSeparator);
+            var resolver = new PathAssemblyResolver(runtimeAssemblies);
+
+            using var context = new MetadataLoadContext(resolver);
+
+            var assembly = context.LoadFromAssemblyPath(entryDll);
+
+            return GetManaged(context, assembly.GetName(), directoryPath, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
         }
 
 
-        public AssemblyInformation GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+        private AssemblyInformation GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
-            if (assembliesLoaded.TryGetValue(assemblyName.Name, out AssemblyInformation assemblyFound))
+            if (assemblyName.Name == null)
+                throw new Exception($"No name for assembly {assemblyName.FullName}");
+
+            if (assembliesLoaded.TryGetValue(assemblyName.Name, out var assemblyFound))
                 return assemblyFound;
 
             var (info, assembly) = CreateManagedAssemblyInformation(context, assemblyName, baseDirectory, extension);
@@ -108,7 +118,7 @@ namespace Dependencies.Analyser.Microsoft
 
             if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(context, x, baseDirectory), x.Version.ToString())));
+                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(context, x, baseDirectory), x.Version?.ToString() ?? string.Empty, x.FullName)));
 
                 if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
@@ -117,12 +127,12 @@ namespace Dependencies.Analyser.Microsoft
             return info;
         }
 
-        private (AssemblyInformation info, Assembly assembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+        private static (AssemblyInformation info, Assembly? assembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
-            var assemblyPath = GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
+            var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 
-            Assembly assembly = null;
-            try 
+            Assembly? assembly = null;
+            try
             {
                 assembly = File.Exists(assemblyPath) ? context.LoadFromAssemblyPath(assemblyPath) : context.LoadFromAssemblyName(assemblyName);
             }
@@ -131,7 +141,10 @@ namespace Dependencies.Analyser.Microsoft
                 // In this case, assembly is not found
             }
 
-            var info = new AssemblyInformation(assemblyName.Name, assembly?.GetName().Version.ToString() ?? assemblyName.Version.ToString(), assemblyPath)
+            var assemblyShortName = assemblyName.Name ?? string.Empty;
+            var assemblyVersion = assemblyName.Version?.ToString() ?? string.Empty;
+
+            var info = new AssemblyInformation(assemblyShortName, assembly?.GetName().Version?.ToString() ?? assemblyVersion, assemblyPath)
             {
                 IsLocalAssembly = assemblyPath != null || assembly == null,
                 AssemblyName = assemblyName.FullName,
@@ -143,14 +156,6 @@ namespace Dependencies.Analyser.Microsoft
 
             return (info, assembly);
         }
-
-        private string GetAssemblyPath(string fileName, string baseDirectory)
-        {
-            var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
-
-            return result.Length != 0 ? result[0] : null;
-        }
-
     }
 }
 

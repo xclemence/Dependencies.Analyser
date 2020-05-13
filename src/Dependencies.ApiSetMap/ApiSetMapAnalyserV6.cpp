@@ -18,6 +18,7 @@ namespace Dependencies::ApiSetMap
 
             // Iterate over all the host dll for this contract
             auto valueEntry = reinterpret_cast<API_SET_VALUE_ENTRY_PTR>(apiSetMapAddress + apiSetEntryIterator->ValueOffset);
+
             for (unsigned j = 0; j < apiSetEntryIterator->ValueCount; j++)
             {
                 // Retrieve dll name implementing the contract
@@ -28,8 +29,7 @@ namespace Dependencies::ApiSetMap
 
                 // If there's an alias...
                 if (valueEntry->NameLength != 0) {
-                    wchar_t* apiSetEntryAliasBuffer = reinterpret_cast<wchar_t*>(apiSetMapAddress + valueEntry->NameOffset);
-                    std::wstring aliasBuffer(apiSetEntryAliasBuffer, valueEntry->NameLength / sizeof(wchar_t));
+                    auto apiSetEntryAliasBuffer = reinterpret_cast<wchar_t*>(apiSetMapAddress + valueEntry->NameOffset);
                     aliasName = getString(apiSetEntryAliasBuffer, valueEntry->NameLength);
                 }
 

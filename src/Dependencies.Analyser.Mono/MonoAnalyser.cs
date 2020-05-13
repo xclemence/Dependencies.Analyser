@@ -17,7 +17,7 @@ namespace Dependencies.Analyser.Mono
         private readonly INativeAnalyser nativeAnalyser;
         private readonly ISettingProvider settings;
 
-        public MonoAnalyser(INativeAnalyser  nativeAnalyser, ISettingProvider settings)
+        public MonoAnalyser(INativeAnalyser nativeAnalyser, ISettingProvider settings)
         {
             this.nativeAnalyser = nativeAnalyser;
             this.settings = settings;
@@ -29,19 +29,22 @@ namespace Dependencies.Analyser.Mono
         private AssemblyInformation LoadAssembly(string dllPath)
         {
             var assembly = LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath);
-            return assembly.RemoveChildenLoop();
+            return assembly.RemoveChildrenLoop();
         }
 
-        public AssemblyInformation LoadManagedAssembly(string entryDll)
+        public AssemblyInformation? LoadManagedAssembly(string entryDll)
         {
             try
             {
                 var fileInfo = new FileInfo(entryDll);
                 var baseDirectory = Path.GetDirectoryName(entryDll);
 
+                if (baseDirectory == null)
+                    return null;
+
                 var assembly = AssemblyDefinition.ReadAssembly(entryDll);
 
-                return GetManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", ""));
+                return GetManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
             }
             catch (BadImageFormatException)
             {
@@ -49,9 +52,9 @@ namespace Dependencies.Analyser.Mono
             }
         }
 
-        public AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
+        private AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
         {
-            if (assembliesLoaded.TryGetValue(assemblyDefinition.Name, out AssemblyInformation assemblyFound))
+            if (assembliesLoaded.TryGetValue(assemblyDefinition.Name, out var assemblyFound))
                 return assemblyFound;
 
             var (info, assembly) = CreateManagedAssemblyInformation(assemblyDefinition, baseDirectory, extension);
@@ -60,9 +63,9 @@ namespace Dependencies.Analyser.Mono
 
             if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString())));
+                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
 
-                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences))
+                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
                     info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
 
                 if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
@@ -74,7 +77,7 @@ namespace Dependencies.Analyser.Mono
 
         private void AppendDllImportDll(AssemblyInformation info, AssemblyDefinition assembly, string baseDirectory)
         {
-            var externalDllNames = GetDllImportValues(assembly);
+            var externalDllNames = assembly.GetDllImportValues();
 
             foreach (var item in externalDllNames)
             {
@@ -85,26 +88,14 @@ namespace Dependencies.Analyser.Mono
             }
         }
 
-        private IEnumerable<string> GetDllImportValues(AssemblyDefinition assembly)
+        private static (AssemblyInformation info, AssemblyDefinition? assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string? baseDirectory, string extension = "dll")
         {
-            var externalLibNames = assembly.Modules.SelectMany(x => x.Types)
-                                          .SelectMany(x => x.Methods)
-                                          .Where(x => x.IsStatic && x.IsPInvokeImpl && x.IsPreserveSig)
-                                          .Select(x => x.PInvokeInfo?.Module?.Name)
-                                          .Where(x => !string.IsNullOrEmpty(x))
-                                          .Distinct();
+            var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 
-            return externalLibNames;
-        }
-
-        private (AssemblyInformation info, AssemblyDefinition assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string baseDirectory, string extension = "dll")
-        {
-            var assemblyPath = GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
-
-            AssemblyDefinition assembly = null;
+            AssemblyDefinition? assembly = null;
             try
             {
-                var resolver = new DefaultAssemblyResolver();
+                using var resolver = new DefaultAssemblyResolver();
                 assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName); ;
             }
             catch
@@ -115,23 +106,16 @@ namespace Dependencies.Analyser.Mono
             var info = new AssemblyInformation(assemblyName.Name, assembly?.Name.Version.ToString() ?? assemblyName.Version.ToString(), assemblyPath)
             {
                 IsLocalAssembly = assemblyPath != null || assembly == null,
-                AssemblyName = assembly?.FullName,
+                AssemblyName = assembly?.FullName ?? assemblyName.FullName,
                 IsResolved = assembly != null,
                 HasEntryPoint = assembly?.EntryPoint != null
-                
+
             };
-            
+
             info.EnhancePropertiesWithFile();
             info.EnhanceProperties(assembly);
-            
+
             return (info, assembly);
-        }
-
-        private string GetAssemblyPath(string fileName, string baseDirectory)
-        {
-            var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
-
-            return result.Length != 0 ? result[0] : null;
         }
     }
 }

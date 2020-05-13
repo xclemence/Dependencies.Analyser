@@ -6,10 +6,8 @@ namespace Dependencies.Analyser.Mono
     {
         private readonly IAnalyserServiceFactory<MonoAnalyser> serviceFactory;
 
-        public MonoAnalyserFactory(IAnalyserServiceFactory<MonoAnalyser> serviceFactory)
-        {
+        public MonoAnalyserFactory(IAnalyserServiceFactory<MonoAnalyser> serviceFactory) =>
             this.serviceFactory = serviceFactory;
-        }
 
         public string Name => "Mono";
         public string Code => "Mono";

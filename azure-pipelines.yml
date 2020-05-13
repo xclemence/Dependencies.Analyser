@@ -10,7 +10,7 @@ trigger:
 
 variables:
   solution: '**/Dependencies.Analyser.sln'
-  buildPlatform: 'x64'
+  buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
 steps:
@@ -18,6 +18,8 @@ steps:
   submodules: recursive
 
 - task: NuGetToolInstaller@0
+  inputs:
+    versionSpec: 5.5.1
 
 - task: NuGetCommand@2
   inputs:
@@ -29,3 +31,10 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
+- task: VSTest@2
+  inputs:
+    testSelector: 'testAssemblies'
+    testAssemblyVer2: | 
+      **\*Tests*.dll
+      !**\*TestAdapter.dll
+      !**\obj\** 

@@ -18,7 +18,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             [ImageFileMachine.AMD64] = TargetProcessor.x64,
         };
 
-        public static void EnhanceProperties(this AssemblyInformation info, Module refModule = null)
+        public static void EnhanceProperties(this AssemblyInformation info, Module? refModule = null)
         {
             if (!info.IsLocalAssembly || !info.IsResolved)
                 return;
@@ -38,7 +38,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
                 if (refModule != null)
                 {
-                    refModule.GetPEKind(out PortableExecutableKinds kind, out ImageFileMachine machine);
+                    refModule.GetPEKind(out var kind, out var machine);
 
                     if (machine == ImageFileMachine.I386 && kind == PortableExecutableKinds.ILOnly) // This configuration is for any CPU...
                         info.TargetProcessor = TargetProcessor.AnyCpu;
@@ -58,7 +58,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             {
                 // Do noting, leave properties found
             }
-            
+
         }
 
         public static bool? GetIsDebugFlag(this Assembly assembly)
@@ -69,21 +69,21 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
             var isDebug = false;
 
-            if (debugAttribute.ConstructorArguments.Count == 1)
+            if (debugAttribute.ConstructorArguments.Count == 1 && debugAttribute.ConstructorArguments[0].Value is int value)
             {
-                var mode = (DebuggableAttribute.DebuggingModes)debugAttribute.ConstructorArguments[0].Value;
+                var mode = (DebuggableAttribute.DebuggingModes)value;
 
                 isDebug = (mode & DebuggableAttribute.DebuggingModes.Default) == DebuggableAttribute.DebuggingModes.Default;
             }
             else
             {
-                isDebug = (bool)debugAttribute.ConstructorArguments[0].Value;
+                isDebug = ((bool?)debugAttribute.ConstructorArguments[0].Value) ?? false;
             }
 
-            if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled))))
+            if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture)))
             {
-                var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled)));
-                isDebug = !((bool)arg.TypedValue.Value);
+                var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture));
+                isDebug = !(((bool?)arg.TypedValue.Value ?? true));
             }
 
             return isDebug;
@@ -95,17 +95,17 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
             if (targetFrameworkAttribute == null || targetFrameworkAttribute.ConstructorArguments.Count != 1) return string.Empty;
 
-            return (string)targetFrameworkAttribute.ConstructorArguments[0].Value;
+            return targetFrameworkAttribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
         }
 
-        public static string GetDllImportDllName(this MethodInfo method)
+        public static string? GetDllImportDllName(this MethodInfo method)
         {
-            var attribute = method.GetCustomAttributesData().FirstOrDefault(x => x.ToString().StartsWith("[System.Runtime.InteropServices.DllImportAttribute"));
+            var attribute = method.GetCustomAttributesData().FirstOrDefault(x => x.ToString().StartsWith("[System.Runtime.InteropServices.DllImportAttribute", StringComparison.InvariantCulture));
 
             if (attribute == null)
                 return null;
 
-            return attribute.ConstructorArguments[0].Value.ToString();
+            return attribute.ConstructorArguments[0].Value?.ToString();
         }
 
         public static IEnumerable<string> GetDllImportReferences(this Assembly assembly)
@@ -113,7 +113,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             var result = assembly.GetTypes().SelectMany(x => x.GetMethods())
                                             .Where(x => x.IsStatic)
                                             .Select(x => x.GetDllImportDllName())
-                                            .Where(x => !string.IsNullOrEmpty(x))
+                                            .OfType<string>()
                                             .Distinct()
                                             .ToList();
 
