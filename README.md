@@ -8,7 +8,7 @@ This repository contains analysers for assemblies dependencies. All analysers in
 - Managed Assemblies scan (C#)
 - Native Assemblies scan (C++)
 - CLI/C++ Assemblies scan
-- Mix assmblies scan (only C# -> C++)
+- Mix Assemblies scan (only C# -> C++)
 - Read Windows Api set map (for native assemblies)
 
 ## analysers
