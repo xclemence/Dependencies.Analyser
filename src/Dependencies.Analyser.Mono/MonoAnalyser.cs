@@ -15,9 +15,9 @@ namespace Dependencies.Analyser.Mono
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded = new Dictionary<string, AssemblyInformation>();
         private readonly INativeAnalyser nativeAnalyser;
-        private readonly ISettingProvider settings;
+        private readonly IAnalyserSettingProvider settings;
 
-        public MonoAnalyser(INativeAnalyser nativeAnalyser, ISettingProvider settings)
+        public MonoAnalyser(INativeAnalyser nativeAnalyser, IAnalyserSettingProvider settings)
         {
             this.nativeAnalyser = nativeAnalyser;
             this.settings = settings;

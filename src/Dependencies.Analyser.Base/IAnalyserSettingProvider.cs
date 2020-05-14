@@ -9,7 +9,7 @@
         public static string ScanCliReferences => "ScanCliReferences";
     }
 
-    public interface ISettingProvider
+    public interface IAnalyserSettingProvider
     {
         void SaveSetting<T>(string code, T value);
 

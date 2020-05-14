@@ -14,13 +14,13 @@ namespace Dependencies.Analyser.Microsoft
     public class ReflectionAnalyser : IAssemblyAnalyser
     {
         private readonly INativeAnalyser nativeAnalyser;
-        private readonly ISettingProvider settings;
+        private readonly IAnalyserSettingProvider settings;
 
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
         private readonly IDictionary<string, IList<string>> dllImportReferences;
 
 
-        public ReflectionAnalyser(INativeAnalyser nativeAnalyser, ISettingProvider settings)
+        public ReflectionAnalyser(INativeAnalyser nativeAnalyser, IAnalyserSettingProvider settings)
         {
             this.nativeAnalyser = nativeAnalyser;
             this.settings = settings;
