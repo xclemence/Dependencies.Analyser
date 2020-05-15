@@ -1,5 +1,4 @@
-﻿using System;
-using Dependencies.ApiSetMapInterop;
+﻿using Dependencies.ApiSetMapInterop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Dependencies.Analyser.Native.UnitTests
@@ -15,6 +14,5 @@ namespace Dependencies.Analyser.Native.UnitTests
 
             Assert.AreNotEqual(0, baseMap.Count);
         }
-
     }
 }

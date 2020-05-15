@@ -19,6 +19,14 @@ namespace Dependencies::ApiSetMap
     class ApiSetMapAnalyserBase {
     public:
         virtual std::unique_ptr<std::map<std::string, std::list<RealDll>>> analyse(const API_SET_NAMESPACE_PTR apiSetMap) const = 0;
+
+        virtual ~ApiSetMapAnalyserBase() = default;
+        ApiSetMapAnalyserBase() = default;
+        ApiSetMapAnalyserBase(const ApiSetMapAnalyserBase&) = default;
+        ApiSetMapAnalyserBase& operator=(const ApiSetMapAnalyserBase&) = default;
+        ApiSetMapAnalyserBase(ApiSetMapAnalyserBase&&) = default;
+        ApiSetMapAnalyserBase& operator=(ApiSetMapAnalyserBase&&) = default;
+
     protected:
         std::string getString(const wchar_t* message, const ULONG size) const;
     };
