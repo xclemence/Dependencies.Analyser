@@ -12,7 +12,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="PeNet" Version="2.2.6" />
+    <PackageReference Include="PeNet" Version="2.2.7" />
   </ItemGroup>
 
   <ItemGroup>
