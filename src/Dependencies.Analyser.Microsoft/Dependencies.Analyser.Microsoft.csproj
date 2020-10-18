@@ -5,6 +5,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,7 @@
     <ProjectReference Include="..\Dependencies.Analyser.Base\Dependencies.Analyser.Base.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\Dependencies.Analyser.Native\Dependencies.Analyser.Native.csproj" />
   </ItemGroup>
 
 </Project>

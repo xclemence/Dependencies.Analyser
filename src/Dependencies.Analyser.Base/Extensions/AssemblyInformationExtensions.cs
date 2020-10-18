@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Dependencies.Analyser.Base.Models;
 
 namespace Dependencies.Analyser.Base.Extensions
@@ -30,50 +28,6 @@ namespace Dependencies.Analyser.Base.Extensions
 
             if (info.IsDebug.HasValue)
                 info.IsDebug = fileVersionInfo.IsDebug;
-        }
-
-        public static IEnumerable<AssemblyLink> GetAllLinks(this AssemblyInformation assembly)
-        {
-            if (assembly is null)
-                throw new System.ArgumentNullException(nameof(assembly));
-
-            foreach (var item in assembly.Links)
-            {
-                yield return item;
-
-                foreach (var subItem in item.Assembly.GetAllLinks())
-                    yield return subItem;
-            }
-        }
-
-        public static AssemblyInformation RemoveChildrenLoop(this AssemblyInformation assembly)
-        {
-            if (assembly is null)
-                throw new System.ArgumentNullException(nameof(assembly));
-
-            var path = new List<AssemblyInformation> { assembly };
-            var newDependencies = assembly.Links.Where(x => x.Assembly.RemoveChildrenLoop(path)).ToList();
-
-            assembly.Links.Clear();
-            assembly.Links.AddRange(newDependencies);
-            return assembly;
-        }
-
-        private static bool RemoveChildrenLoop(this AssemblyInformation assembly, IEnumerable<AssemblyInformation> path)
-        {
-            var currentPath = path.ToList();
-
-            if (currentPath.Contains(assembly))
-                return false;
-
-            currentPath.Add(assembly);
-
-            var newDependencies = assembly.Links.Where(x => RemoveChildrenLoop(x.Assembly, currentPath)).ToList();
-
-            assembly.Links.Clear();
-            assembly.Links.AddRange(newDependencies);
-
-            return true;
         }
     }
 }
