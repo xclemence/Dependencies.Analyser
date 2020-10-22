@@ -125,9 +125,11 @@ namespace Dependencies.Analyser.Microsoft
             if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
                 return assemblyLink;
 
-            var newAssemblyLink = new AssemblyLink(GetManaged(context, assembly, baseDirectory), assembly.Version?.ToString() ?? string.Empty, assembly.FullName);
+            var newAssemblyLink = new AssemblyLink(assembly.Version?.ToString(), assembly.FullName);
 
             LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+
+            newAssemblyLink.Assembly = GetManaged(context, assembly, baseDirectory);
 
             return newAssemblyLink;
         }

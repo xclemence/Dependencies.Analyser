@@ -79,9 +79,11 @@ namespace Dependencies.Analyser.Mono
             if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
                 return assemblyLink;
 
-            var newAssemblyLink = new AssemblyLink(GetManaged(assembly, baseDirectory), assembly.Version.ToString(), assembly.FullName);
+            var newAssemblyLink = new AssemblyLink(assembly.Version.ToString(), assembly.FullName);
 
             LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+
+            newAssemblyLink.Assembly = GetManaged(assembly, baseDirectory);
 
             return newAssemblyLink;
         }

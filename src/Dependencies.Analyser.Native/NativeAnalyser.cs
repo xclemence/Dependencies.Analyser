@@ -101,6 +101,9 @@ namespace Dependencies.Analyser.Native
         {
             var peFile = new PeFile(file);
 
+            if (peFile.ImportedFunctions == null)
+                yield break;
+
             var referencedAssemblies = peFile.ImportedFunctions
                                        .Select(x => GetFilePath(x.DLL, baseDirectory))
                                        .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
