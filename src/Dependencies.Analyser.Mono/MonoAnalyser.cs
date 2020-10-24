@@ -2,34 +2,30 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Dependencies.Analyser.Base;
 using Dependencies.Analyser.Base.Extensions;
 using Dependencies.Analyser.Base.Models;
 using Dependencies.Analyser.Mono.Extensions;
+using Dependencies.Analyser.Native;
 using Mono.Cecil;
 
 namespace Dependencies.Analyser.Mono
 {
-    public class MonoAnalyser : IAssemblyAnalyser
+    public class MonoAnalyser : BaseAnalyser
     {
-        private readonly IDictionary<string, AssemblyInformation> assembliesLoaded = new Dictionary<string, AssemblyInformation>();
-        private readonly INativeAnalyser nativeAnalyser;
-        private readonly IAnalyserSettingProvider settings;
-
-        public MonoAnalyser(INativeAnalyser nativeAnalyser, IAnalyserSettingProvider settings)
+        public MonoAnalyser(IAnalyserSettingProvider settings) :
+            base(settings)
         {
-            this.nativeAnalyser = nativeAnalyser;
-            this.settings = settings;
+            NativeAnalyser = new NativeAnalyser(settings, AssembliesLoaded, LinksLoaded);
         }
 
-        public async Task<AssemblyInformation> AnalyseAsync(string dllPath) =>
-            await Task.Run(() => LoadAssembly(dllPath)).ConfigureAwait(false);
+        protected INativeAnalyser NativeAnalyser { get; }
 
-        private AssemblyInformation LoadAssembly(string dllPath)
+        protected override (AssemblyInformation assembly, IDictionary<string, AssemblyLink> links) Analyse(string dllPath)
         {
-            var assembly = LoadManagedAssembly(dllPath) ?? nativeAnalyser.LoadNativeAssembly(dllPath);
-            return assembly.RemoveChildrenLoop();
+            var assembly = LoadManagedAssembly(dllPath) ?? NativeAnalyser.LoadNativeAssembly(dllPath);
+
+            return (assembly, LinksLoaded);
         }
 
         public AssemblyInformation? LoadManagedAssembly(string entryDll)
@@ -54,25 +50,44 @@ namespace Dependencies.Analyser.Mono
 
         private AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
         {
-            if (assembliesLoaded.TryGetValue(assemblyDefinition.Name, out var assemblyFound))
+            if (AssembliesLoaded.TryGetValue(assemblyDefinition.Name, out var assemblyFound))
                 return assemblyFound;
 
             var (info, assembly) = CreateManagedAssemblyInformation(assemblyDefinition, baseDirectory, extension);
 
-            assembliesLoaded.Add(assemblyDefinition.Name, info);
+            AssembliesLoaded.Add(assemblyDefinition.Name, info);
 
-            if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
+            if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => new AssemblyLink(GetManaged(x, baseDirectory), x.Version.ToString(), x.FullName)));
+                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => GetAssemblyLink(x, assemblyDefinition.FullName, baseDirectory)));
 
-                if (!info.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
-                    info.Links.AddRange(nativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
+                if (!info.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
+                    info.Links.AddRange(NativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
 
-                if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
+                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     AppendDllImportDll(info, assembly, baseDirectory);
             }
 
             return info;
+        }
+
+        public AssemblyLink GetAssemblyLink(AssemblyNameReference assembly, string parentName, string baseDirectory)
+        {
+            if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            {
+                assemblyLink.Assembly?.ParentLinkName.Add(parentName);
+                return assemblyLink;
+            }
+
+            var newAssemblyLink = new AssemblyLink(assembly.Version.ToString(), assembly.FullName);
+
+            LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+
+            newAssemblyLink.Assembly = GetManaged(assembly, baseDirectory);
+
+            newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
+
+            return newAssemblyLink;
         }
 
         private void AppendDllImportDll(AssemblyInformation info, AssemblyDefinition assembly, string baseDirectory)
@@ -81,7 +96,7 @@ namespace Dependencies.Analyser.Mono
 
             foreach (var item in externalDllNames)
             {
-                var link = nativeAnalyser.GetNativeLink(item, baseDirectory);
+                var link = NativeAnalyser.GetNativeLink(item, baseDirectory);
 
                 if (!info.Links.Contains(link))
                     info.Links.Add(link);
@@ -96,7 +111,7 @@ namespace Dependencies.Analyser.Mono
             try
             {
                 using var resolver = new DefaultAssemblyResolver();
-                assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName); ;
+                assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName);
             }
             catch
             {

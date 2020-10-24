@@ -3,36 +3,29 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using Dependencies.Analyser.Base;
 using Dependencies.Analyser.Base.Extensions;
 using Dependencies.Analyser.Base.Models;
 using Dependencies.Analyser.Microsoft.Extensions;
+using Dependencies.Analyser.Native;
 
 namespace Dependencies.Analyser.Microsoft
 {
-    public class ReflectionAnalyser : IAssemblyAnalyser
+    public class ReflectionAnalyser : BaseAnalyser
     {
         private readonly INativeAnalyser nativeAnalyser;
-        private readonly IAnalyserSettingProvider settings;
 
-        private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
         private readonly IDictionary<string, IList<string>> dllImportReferences;
 
-
-        public ReflectionAnalyser(INativeAnalyser nativeAnalyser, IAnalyserSettingProvider settings)
+        public ReflectionAnalyser(IAnalyserSettingProvider settings)
+            : base(settings)
         {
-            this.nativeAnalyser = nativeAnalyser;
-            this.settings = settings;
+            nativeAnalyser = new NativeAnalyser(settings, AssembliesLoaded, LinksLoaded);
 
-            assembliesLoaded = new Dictionary<string, AssemblyInformation>();
             dllImportReferences = new Dictionary<string, IList<string>>();
         }
 
-        public async Task<AssemblyInformation> AnalyseAsync(string dllPath) =>
-            await Task.Run(() => LoadAssembly(dllPath).RemoveChildrenLoop()).ConfigureAwait(false);
-
-        private AssemblyInformation LoadAssembly(string dllPath)
+        protected override (AssemblyInformation assembly, IDictionary<string, AssemblyLink> links) Analyse(string dllPath)
         {
             try
             {
@@ -43,12 +36,12 @@ namespace Dependencies.Analyser.Microsoft
                 if(directoryPath != null)
                     AnalyseNativeAssemblies(assembly, directoryPath);
 
-                return assembly;
+                return (assembly, LinksLoaded);
 
             }
             catch (BadImageFormatException)
             {
-                return nativeAnalyser.LoadNativeAssembly(dllPath);
+                return (nativeAnalyser.LoadNativeAssembly(dllPath), LinksLoaded);
             }
         }
 
@@ -56,7 +49,7 @@ namespace Dependencies.Analyser.Microsoft
         {
             LoadNativeReferences(info, baseDirectory);
 
-            var subAssemblies = info.GetAllLinks().Select(x => x.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
+            var subAssemblies = LinksLoaded.Select(x => x.Value.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
 
             foreach (var assembly in subAssemblies)
                 LoadNativeReferences(assembly, baseDirectory);
@@ -64,7 +57,7 @@ namespace Dependencies.Analyser.Microsoft
 
         private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
         {
-            if (!assembly.IsILOnly && settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && assembly.FilePath != null)
+            if (!assembly.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && assembly.FilePath != null)
                 assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
 
 
@@ -82,7 +75,6 @@ namespace Dependencies.Analyser.Microsoft
                     assembly.Links.Add(link);
             }
         }
-
 
         private AssemblyInformation LoadManagedAssembly(string entryDll)
         {
@@ -109,22 +101,40 @@ namespace Dependencies.Analyser.Microsoft
             if (assemblyName.Name == null)
                 throw new Exception($"No name for assembly {assemblyName.FullName}");
 
-            if (assembliesLoaded.TryGetValue(assemblyName.Name, out var assemblyFound))
+            if (AssembliesLoaded.TryGetValue(assemblyName.Name, out var assemblyFound))
                 return assemblyFound;
 
             var (info, assembly) = CreateManagedAssemblyInformation(context, assemblyName, baseDirectory, extension);
 
-            assembliesLoaded.Add(assemblyName.Name, info);
+            AssembliesLoaded.Add(assemblyName.Name, info);
 
-            if (assembly != null && (info.IsLocalAssembly || settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
+            if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => new AssemblyLink(GetManaged(context, x, baseDirectory), x.Version?.ToString() ?? string.Empty, x.FullName)));
+                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => GetAssemblyLink(context, x, assemblyName.FullName, baseDirectory)));
 
-                if (settings.GetSetting<bool>(SettingKeys.ScanDllImport))
+                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
             }
 
             return info;
+        }
+
+        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assembly, string parentName,  string baseDirectory)
+        {
+            if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            {
+                assemblyLink.Assembly?.ParentLinkName.Add(parentName);
+                return assemblyLink;
+            }
+
+            var newAssemblyLink = new AssemblyLink(assembly.Version?.ToString(), assembly.FullName);
+
+            LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+
+            newAssemblyLink.Assembly = GetManaged(context, assembly, baseDirectory);
+            newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
+
+            return newAssemblyLink;
         }
 
         private static (AssemblyInformation info, Assembly? assembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
@@ -156,6 +166,7 @@ namespace Dependencies.Analyser.Microsoft
 
             return (info, assembly);
         }
+
     }
 }
 

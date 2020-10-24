@@ -13,12 +13,14 @@ namespace Dependencies.Analyser.Native
     public class NativeAnalyser : INativeAnalyser
     {
         private readonly IDictionary<string, AssemblyInformation> assembliesLoaded;
+        private readonly IDictionary<string, AssemblyLink> links;
         private readonly IDictionary<string, string> windowsApiMap;
         private readonly bool scanGlobalAssemblies;
 
-        public NativeAnalyser(IAnalyserSettingProvider setting)
+        public NativeAnalyser(IAnalyserSettingProvider setting, IDictionary<string, AssemblyInformation> assembliesLoaded, IDictionary<string, AssemblyLink> links)
         {
-            assembliesLoaded = new Dictionary<string, AssemblyInformation>();
+            this.assembliesLoaded = assembliesLoaded;
+            this.links = links;
             scanGlobalAssemblies = setting?.GetSetting<bool>(SettingKeys.ScanGlobalNative) ?? false;
 
             var apiMapProvider = new ApiSetMapProviderInterop();
@@ -99,14 +101,17 @@ namespace Dependencies.Analyser.Native
         {
             var peFile = new PeFile(file);
 
-            var referencedFiles = peFile.ImportedFunctions
+            if (peFile.ImportedFunctions == null)
+                yield break;
+
+            var referencedAssemblies = peFile.ImportedFunctions
                                        .Select(x => GetFilePath(x.DLL, baseDirectory))
                                        .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
                                        .Distinct()
                                        .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
-            foreach (var item in referencedFiles)
-                yield return new AssemblyLink(item, item.LoadedVersion, item.FullName);
+            foreach (var item in referencedAssemblies)
+                yield return GetAssemblyLink(item);
         }
 
         public AssemblyLink GetNativeLink(string dllName, string baseDirectory)
@@ -114,7 +119,19 @@ namespace Dependencies.Analyser.Native
             var (file, filePath, isSystem) = GetFilePath(dllName, baseDirectory);
             var assembly = GetNative(file, filePath, isSystem, baseDirectory);
 
-            return new AssemblyLink(assembly, assembly.LoadedVersion, assembly.FullName);
+            return GetAssemblyLink(assembly);
+        }
+
+        public AssemblyLink GetAssemblyLink(AssemblyInformation assembly)
+        {
+            if (links.TryGetValue(assembly.FullName, out var assemblyLink))
+                return assemblyLink;
+
+            var newLinks = new AssemblyLink(assembly, assembly.LoadedVersion, assembly.FullName);
+
+            links.Add(assembly.FullName, newLinks);
+
+            return newLinks;
         }
 
         public AssemblyInformation GetNative(string fileName, string? filePath, bool isSystem, string? baseDirectory)
@@ -138,7 +155,7 @@ namespace Dependencies.Analyser.Native
                     info.Links.AddRange(referencedAssemblyFiles.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
                     {
                         var native = GetNative(x.file, x.filePath, x.isSystem, baseDirectory);
-                        return new AssemblyLink(native, native.LoadedVersion, native.FullName);
+                        return GetAssemblyLink(native);
                     }));
                 }
             }
