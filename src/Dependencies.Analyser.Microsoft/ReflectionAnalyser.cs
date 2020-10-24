@@ -76,7 +76,6 @@ namespace Dependencies.Analyser.Microsoft
             }
         }
 
-
         private AssemblyInformation LoadManagedAssembly(string entryDll)
         {
 
@@ -111,7 +110,7 @@ namespace Dependencies.Analyser.Microsoft
 
             if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => GetAssemblyLink(context, x, baseDirectory)));
+                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => GetAssemblyLink(context, x, assemblyName.FullName, baseDirectory)));
 
                 if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
                     dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
@@ -120,16 +119,20 @@ namespace Dependencies.Analyser.Microsoft
             return info;
         }
 
-        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assembly,  string baseDirectory)
+        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assembly, string parentName,  string baseDirectory)
         {
             if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            {
+                assemblyLink.Assembly?.ParentLinkName.Add(parentName);
                 return assemblyLink;
+            }
 
             var newAssemblyLink = new AssemblyLink(assembly.Version?.ToString(), assembly.FullName);
 
             LinksLoaded.Add(assembly.FullName, newAssemblyLink);
 
             newAssemblyLink.Assembly = GetManaged(context, assembly, baseDirectory);
+            newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
 
             return newAssemblyLink;
         }

@@ -12,7 +12,7 @@ namespace Dependencies.Analyser.Base.Models
     }
 
     [DebuggerDisplay("Name = {Name}, Loaded Version = {LoadedVersion}, Local= {IsLocalAssembly}, Resolved={IsResolved} , Links = {Links.Count}")]
-    public class AssemblyInformation : IEquatable<AssemblyInformation>
+    public class AssemblyInformation : IEquatable<AssemblyInformation>, IEqualityComparer<AssemblyInformation>
     {
 
         public AssemblyInformation(string name,
@@ -22,6 +22,7 @@ namespace Dependencies.Analyser.Base.Models
             Name = name;
             LoadedVersion = loadedVersion;
             Links = new List<AssemblyLink>();
+            ParentLinkName = new HashSet<string>();
             FilePath = filePath;
         }
 
@@ -56,6 +57,8 @@ namespace Dependencies.Analyser.Base.Models
 
         public List<AssemblyLink> Links { get; }
 
+        public HashSet<string> ParentLinkName { get; }
+
         public override bool Equals(object? obj) => obj is AssemblyInformation information && Equals(information);
         public bool Equals(AssemblyInformation other)
         {
@@ -64,7 +67,10 @@ namespace Dependencies.Analyser.Base.Models
                    TargetFramework == other.TargetFramework &&
                    TargetProcessor == other.TargetProcessor;
         }
+
+        public bool Equals(AssemblyInformation x, AssemblyInformation y) => x.Equals(y);
         public override int GetHashCode() => HashCode.Combine(FullName, IsDebug, TargetFramework, TargetProcessor);
+        public int GetHashCode(AssemblyInformation obj) => obj.GetHashCode();
 
         public static bool operator ==(AssemblyInformation? left, AssemblyInformation? right) => EqualityComparer<AssemblyInformation?>.Default.Equals(left, right);
         public static bool operator !=(AssemblyInformation? left, AssemblyInformation? right) => !(left == right);

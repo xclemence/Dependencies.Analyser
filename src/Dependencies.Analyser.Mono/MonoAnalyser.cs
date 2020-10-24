@@ -55,13 +55,11 @@ namespace Dependencies.Analyser.Mono
 
             var (info, assembly) = CreateManagedAssemblyInformation(assemblyDefinition, baseDirectory, extension);
 
-            Console.WriteLine($"WARNING: {assemblyDefinition.Name}");
-
             AssembliesLoaded.Add(assemblyDefinition.Name, info);
 
             if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
             {
-                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => GetAssemblyLink(x, baseDirectory)));
+                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => GetAssemblyLink(x, assemblyDefinition.FullName, baseDirectory)));
 
                 if (!info.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
                     info.Links.AddRange(NativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
@@ -73,17 +71,21 @@ namespace Dependencies.Analyser.Mono
             return info;
         }
 
-
-        public AssemblyLink GetAssemblyLink(AssemblyNameReference assembly, string baseDirectory)
+        public AssemblyLink GetAssemblyLink(AssemblyNameReference assembly, string parentName, string baseDirectory)
         {
             if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            {
+                assemblyLink.Assembly?.ParentLinkName.Add(parentName);
                 return assemblyLink;
+            }
 
             var newAssemblyLink = new AssemblyLink(assembly.Version.ToString(), assembly.FullName);
 
             LinksLoaded.Add(assembly.FullName, newAssemblyLink);
 
             newAssemblyLink.Assembly = GetManaged(assembly, baseDirectory);
+
+            newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
 
             return newAssemblyLink;
         }
@@ -109,7 +111,7 @@ namespace Dependencies.Analyser.Mono
             try
             {
                 using var resolver = new DefaultAssemblyResolver();
-                assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName); ;
+                assembly = assemblyPath != null ? AssemblyDefinition.ReadAssembly(assemblyPath) : resolver.Resolve(assemblyName);
             }
             catch
             {
