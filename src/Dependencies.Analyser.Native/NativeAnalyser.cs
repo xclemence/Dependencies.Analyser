@@ -97,37 +97,44 @@ namespace Dependencies.Analyser.Native
             return result.Length != 0 ? result[0] : null;
         }
 
-        public IEnumerable<AssemblyLink> GetNativeLinks(string file, string baseDirectory)
+        public IEnumerable<AssemblyLink> GetNativeLinks(AssemblyInformation assembly, string parentName, string baseDirectory)
         {
-            var peFile = new PeFile(file);
+            var peFile = new PeFile(assembly.FilePath);
 
             if (peFile.ImportedFunctions == null)
                 yield break;
 
             var referencedAssemblies = peFile.ImportedFunctions
                                        .Select(x => GetFilePath(x.DLL, baseDirectory))
-                                       .Where(x => !string.Equals(x.file, file, StringComparison.InvariantCultureIgnoreCase))
+                                       .Where(x => !string.Equals(x.file, assembly.FilePath, StringComparison.InvariantCultureIgnoreCase))
                                        .Distinct()
                                        .Select(x => GetNative(x.file, x.filePath, x.isSystem, baseDirectory));
 
             foreach (var item in referencedAssemblies)
-                yield return GetAssemblyLink(item);
+                yield return GetAssemblyLink(item, parentName);
         }
 
-        public AssemblyLink GetNativeLink(string dllName, string baseDirectory)
+        public AssemblyLink GetNativeLink(string dllName, string baseDirectory, string? parentName = null)
         {
             var (file, filePath, isSystem) = GetFilePath(dllName, baseDirectory);
             var assembly = GetNative(file, filePath, isSystem, baseDirectory);
 
-            return GetAssemblyLink(assembly);
+            return GetAssemblyLink(assembly, parentName);
         }
 
-        public AssemblyLink GetAssemblyLink(AssemblyInformation assembly)
+        public AssemblyLink GetAssemblyLink(AssemblyInformation assembly, string? parentAssembly)
         {
             if (links.TryGetValue(assembly.FullName, out var assemblyLink))
+            {
+                if(!string.IsNullOrEmpty(parentAssembly))
+                    assemblyLink.Assembly.ParentLinkName.Add(parentAssembly);
                 return assemblyLink;
+            }
 
             var newLinks = new AssemblyLink(assembly, assembly.LoadedVersion, assembly.FullName);
+            
+            if (!string.IsNullOrEmpty(parentAssembly))
+                newLinks.Assembly.ParentLinkName.Add(parentAssembly);
 
             links.Add(assembly.FullName, newLinks);
 
@@ -155,7 +162,7 @@ namespace Dependencies.Analyser.Native
                     info.Links.AddRange(referencedAssemblyFiles.Select(x => GetFilePath(x, baseDirectory)).Distinct().Select(x =>
                     {
                         var native = GetNative(x.file, x.filePath, x.isSystem, baseDirectory);
-                        return GetAssemblyLink(native);
+                        return GetAssemblyLink(native, info.FullName);
                     }));
                 }
             }

@@ -8,18 +8,13 @@ namespace Dependencies.Analyser.Base.Models
     public class AssemblyLink : IEquatable<AssemblyLink>, IEqualityComparer<AssemblyLink>
     {
         public AssemblyLink(AssemblyInformation assembly, string? linkVersion, string linkFullName)
-            : this(linkVersion, linkFullName)
         {
             Assembly = assembly;
-        }
-
-        public AssemblyLink(string? linkVersion, string linkFullName)
-        {
             LinkVersion = linkVersion;
             LinkFullName = linkFullName;
         }
 
-        public AssemblyInformation? Assembly { get; set; }
+        public AssemblyInformation Assembly { get; set; }
 
         public string? LinkVersion { get; set; }
 

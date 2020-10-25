@@ -47,18 +47,18 @@ namespace Dependencies.Analyser.Microsoft
 
         private void AnalyseNativeAssemblies(AssemblyInformation info, string baseDirectory)
         {
-            LoadNativeReferences(info, baseDirectory);
+            LoadNativeReferences(info, info.FullName, baseDirectory);
 
-            var subAssemblies = LinksLoaded.Select(x => x.Value.Assembly).Distinct().Where(x => x.IsResolved && !string.IsNullOrEmpty(x.FilePath)).ToArray();
+            var subAssemblies = LinksLoaded.Select(x => x.Value).Where(x => x.Assembly.IsResolved && !string.IsNullOrEmpty(x.Assembly.FilePath)).ToArray();
 
-            foreach (var assembly in subAssemblies)
-                LoadNativeReferences(assembly, baseDirectory);
+            foreach (var link in subAssemblies)
+                LoadNativeReferences(link.Assembly, link.LinkFullName, baseDirectory);
         }
 
-        private void LoadNativeReferences(AssemblyInformation assembly, string baseDirectory)
+        private void LoadNativeReferences(AssemblyInformation assembly, string parentName, string baseDirectory)
         {
             if (!assembly.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && assembly.FilePath != null)
-                assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly.FilePath, baseDirectory));
+                assembly.Links.AddRange(nativeAnalyser.GetNativeLinks(assembly, parentName, baseDirectory));
 
 
             if (dllImportReferences.TryGetValue(assembly.FullName, out var references))
@@ -92,52 +92,65 @@ namespace Dependencies.Analyser.Microsoft
 
             var assembly = context.LoadFromAssemblyPath(entryDll);
 
-            return GetManaged(context, assembly.GetName(), directoryPath, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
+            return GetRootManaged(context, assembly.GetName(), directoryPath, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
         }
 
+        private AssemblyInformation GetRootManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension)
+        {
+            var (assembly, msAssembly) = GetManaged(context, assemblyName, baseDirectory, extension);
 
-        private AssemblyInformation GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+            AddLoadedAssemblies(assembly, msAssembly, context, assembly.FullName, baseDirectory);
+
+            return assembly;
+        }
+
+        private (AssemblyInformation assembly, Assembly? msAssembly) GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             if (assemblyName.Name == null)
                 throw new Exception($"No name for assembly {assemblyName.FullName}");
 
             if (AssembliesLoaded.TryGetValue(assemblyName.Name, out var assemblyFound))
-                return assemblyFound;
+                return (assemblyFound, null);
 
-            var (info, assembly) = CreateManagedAssemblyInformation(context, assemblyName, baseDirectory, extension);
+            var (assembly, msAssembly) = CreateManagedAssemblyInformation(context, assemblyName, baseDirectory, extension);
 
-            AssembliesLoaded.Add(assemblyName.Name, info);
+            AssembliesLoaded.Add(assemblyName.Name, assembly);
 
-            if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
-            {
-                info.Links.AddRange(assembly.GetReferencedAssemblies().Select(x => GetAssemblyLink(context, x, assemblyName.FullName, baseDirectory)));
-
-                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
-                    dllImportReferences[info.FullName] = assembly.GetDllImportReferences().ToList();
-            }
-
-            return info;
+            return (assembly, msAssembly);
         }
 
-        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assembly, string parentName,  string baseDirectory)
+        private void AddLoadedAssemblies(AssemblyInformation assembly, Assembly? msAssembly, MetadataLoadContext context, string parentAssemblyName, string baseDirectory)
         {
-            if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            if (msAssembly != null && (assembly.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
+            {
+                assembly.Links.AddRange(msAssembly.GetReferencedAssemblies().Select(x => GetAssemblyLink(context, x, parentAssemblyName, baseDirectory)));
+
+                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
+                    dllImportReferences[assembly.FullName] = msAssembly.GetDllImportReferences().ToList();
+            }
+        }
+
+        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assemblyName, string parentName,  string baseDirectory)
+        {
+            if (LinksLoaded.TryGetValue(assemblyName.FullName, out var assemblyLink))
             {
                 assemblyLink.Assembly?.ParentLinkName.Add(parentName);
                 return assemblyLink;
             }
 
-            var newAssemblyLink = new AssemblyLink(assembly.Version?.ToString(), assembly.FullName);
+            var (assembly, msAssembly) = GetManaged(context, assemblyName, baseDirectory);
 
-            LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+            var newAssemblyLink = new AssemblyLink(assembly, assemblyName.Version?.ToString(), assemblyName.FullName);
+            LinksLoaded.Add(assemblyName.FullName, newAssemblyLink);
 
-            newAssemblyLink.Assembly = GetManaged(context, assembly, baseDirectory);
+            AddLoadedAssemblies(assembly, msAssembly, context, assemblyName.FullName, baseDirectory);
+
             newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
 
             return newAssemblyLink;
         }
 
-        private static (AssemblyInformation info, Assembly? assembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+        private static (AssemblyInformation assembly, Assembly? msAssembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 

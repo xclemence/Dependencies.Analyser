@@ -40,70 +40,83 @@ namespace Dependencies.Analyser.Mono
 
                 var assembly = AssemblyDefinition.ReadAssembly(entryDll);
 
-                return GetManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
+                return GetRootManaged(assembly.Name, baseDirectory, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
             }
             catch (BadImageFormatException)
             {
                 return null;
             }
         }
-
-        private AssemblyInformation GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
+        private AssemblyInformation GetRootManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension)
         {
-            if (AssembliesLoaded.TryGetValue(assemblyDefinition.Name, out var assemblyFound))
-                return assemblyFound;
+            var (assembly, monoAssembly) = GetManaged(assemblyDefinition, baseDirectory, extension);
 
-            var (info, assembly) = CreateManagedAssemblyInformation(assemblyDefinition, baseDirectory, extension);
+            AddLoadedAssemblies(assembly, monoAssembly, assemblyDefinition.FullName, baseDirectory);
 
-            AssembliesLoaded.Add(assemblyDefinition.Name, info);
-
-            if (assembly != null && (info.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
-            {
-                info.Links.AddRange(assembly.MainModule.AssemblyReferences.Select(x => GetAssemblyLink(x, assemblyDefinition.FullName, baseDirectory)));
-
-                if (!info.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && info.FilePath != null)
-                    info.Links.AddRange(NativeAnalyser.GetNativeLinks(info.FilePath, baseDirectory));
-
-                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
-                    AppendDllImportDll(info, assembly, baseDirectory);
-            }
-
-            return info;
+            return assembly;
         }
 
-        public AssemblyLink GetAssemblyLink(AssemblyNameReference assembly, string parentName, string baseDirectory)
+
+        private (AssemblyInformation assembly, AssemblyDefinition? monoAssembly) GetManaged(AssemblyNameReference assemblyDefinition, string baseDirectory, string extension = "dll")
         {
-            if (LinksLoaded.TryGetValue(assembly.FullName, out var assemblyLink))
+            if (AssembliesLoaded.TryGetValue(assemblyDefinition.Name, out var assemblyFound))
+                return (assemblyFound, null);
+
+            var assemblyInfos = CreateManagedAssemblyInformation(assemblyDefinition, baseDirectory, extension);
+
+            AssembliesLoaded.Add(assemblyDefinition.Name, assemblyInfos.assembly);
+
+            return assemblyInfos;
+        }
+
+        private void AddLoadedAssemblies(AssemblyInformation assembly, AssemblyDefinition? monoAssembly, string parentAssemblyName, string baseDirectory)
+        {
+            if (monoAssembly != null && (assembly.IsLocalAssembly || Settings.GetSetting<bool>(SettingKeys.ScanGlobalManaged)))
+            {
+                assembly.Links.AddRange(monoAssembly.MainModule.AssemblyReferences.Select(x => GetAssemblyLink(x, parentAssemblyName, baseDirectory)));
+
+                if (!assembly.IsILOnly && Settings.GetSetting<bool>(SettingKeys.ScanCliReferences) && assembly.FilePath != null)
+                    assembly.Links.AddRange(NativeAnalyser.GetNativeLinks(assembly, parentAssemblyName, baseDirectory));
+
+                if (Settings.GetSetting<bool>(SettingKeys.ScanDllImport))
+                    AppendDllImportDll(assembly, monoAssembly, parentAssemblyName, baseDirectory);
+            }
+        }
+
+        public AssemblyLink GetAssemblyLink(AssemblyNameReference assemblNamey, string parentName, string baseDirectory)
+        {
+            if (LinksLoaded.TryGetValue(assemblNamey.FullName, out var assemblyLink))
             {
                 assemblyLink.Assembly?.ParentLinkName.Add(parentName);
                 return assemblyLink;
             }
 
-            var newAssemblyLink = new AssemblyLink(assembly.Version.ToString(), assembly.FullName);
+            var (assembly, monoAssembly) =  GetManaged(assemblNamey, baseDirectory);
 
-            LinksLoaded.Add(assembly.FullName, newAssemblyLink);
+            var newAssemblyLink = new AssemblyLink(assembly, assemblNamey.Version.ToString(), assemblNamey.FullName);
 
-            newAssemblyLink.Assembly = GetManaged(assembly, baseDirectory);
-
+            LinksLoaded.Add(assemblNamey.FullName, newAssemblyLink);
+            
+            AddLoadedAssemblies(assembly, monoAssembly, assemblNamey.FullName, baseDirectory);
             newAssemblyLink.Assembly.ParentLinkName.Add(parentName);
 
             return newAssemblyLink;
         }
 
-        private void AppendDllImportDll(AssemblyInformation info, AssemblyDefinition assembly, string baseDirectory)
+        private void AppendDllImportDll(AssemblyInformation info, AssemblyDefinition assembly, string parentName, string baseDirectory)
         {
             var externalDllNames = assembly.GetDllImportValues();
 
             foreach (var item in externalDllNames)
             {
-                var link = NativeAnalyser.GetNativeLink(item, baseDirectory);
+                var link = NativeAnalyser.GetNativeLink(item, baseDirectory, parentName);
 
                 if (!info.Links.Contains(link))
                     info.Links.Add(link);
             }
         }
 
-        private static (AssemblyInformation info, AssemblyDefinition? assembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string? baseDirectory, string extension = "dll")
+        private static (AssemblyInformation assembly, AssemblyDefinition? monoAssembly) CreateManagedAssemblyInformation(AssemblyNameReference assemblyName, string? baseDirectory, string extension = "dll")
         {
             var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 
