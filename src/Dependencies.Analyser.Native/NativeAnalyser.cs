@@ -99,6 +99,9 @@ namespace Dependencies.Analyser.Native
 
         public IEnumerable<AssemblyLink> GetNativeLinks(AssemblyInformation assembly, string parentName, string baseDirectory)
         {
+            if (string.IsNullOrEmpty(assembly.FilePath))
+                yield break;
+
             var peFile = new PeFile(assembly.FilePath);
 
             if (peFile.ImportedFunctions == null)
