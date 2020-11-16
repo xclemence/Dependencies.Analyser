@@ -156,7 +156,7 @@ namespace Dependencies.Analyser.Native
             {
                 var peFile = new PeFile(info.FilePath);
 
-                var referencedAssemblyFiles = peFile.ImportedFunctions.Select(x => x.DLL).Distinct().ToList();
+                var referencedAssemblyFiles = peFile.ImportedFunctions?.Select(x => x.DLL).Distinct().ToList() ?? Enumerable.Empty<string>().ToList();
 
                 info.TargetProcessor = peFile.Is64Bit ? TargetProcessor.x64 : TargetProcessor.x86;
 

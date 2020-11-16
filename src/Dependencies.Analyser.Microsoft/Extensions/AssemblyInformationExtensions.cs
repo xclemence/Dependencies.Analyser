@@ -20,7 +20,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
 
         public static void EnhanceProperties(this AssemblyInformation info, Module? refModule = null)
         {
-            if (!info.IsLocalAssembly || !info.IsResolved)
+            if (!info.IsLocalAssembly || !info.IsResolved || info.FilePath is null)
                 return;
 
             try
@@ -83,7 +83,7 @@ namespace Dependencies.Analyser.Microsoft.Extensions
             if (debugAttribute.NamedArguments.Any(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture)))
             {
                 var arg = debugAttribute.NamedArguments.SingleOrDefault(x => x.MemberInfo.Name.Equals(nameof(DebuggableAttribute.IsJITTrackingEnabled), StringComparison.InvariantCulture));
-                isDebug = !(((bool?)arg.TypedValue.Value ?? true));
+                isDebug = !((bool?)arg.TypedValue.Value ?? true);
             }
 
             return isDebug;
