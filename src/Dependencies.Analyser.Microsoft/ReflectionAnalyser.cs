@@ -85,7 +85,7 @@ namespace Dependencies.Analyser.Microsoft
             if (directoryPath == null)
                 throw new FileNotFoundException(entryDll);
 
-            var runtimeAssemblies = (AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string)?.Split(Path.PathSeparator);
+            var runtimeAssemblies = (AppDomain.CurrentDomain.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string)?.Split(Path.PathSeparator) ?? new string[0];
             var resolver = new PathAssemblyResolver(runtimeAssemblies);
 
             using var context = new MetadataLoadContext(resolver);
@@ -107,7 +107,7 @@ namespace Dependencies.Analyser.Microsoft
         private (AssemblyInformation assembly, Assembly? msAssembly) GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             if (assemblyName.Name == null)
-                throw new Exception($"No name for assembly {assemblyName.FullName}");
+                throw new ArgumentNullException($"No name for assembly {assemblyName.FullName}");
 
             if (AssembliesLoaded.TryGetValue(assemblyName.Name, out var assemblyFound))
                 return (assemblyFound, null);
@@ -157,7 +157,7 @@ namespace Dependencies.Analyser.Microsoft
             Assembly? assembly = null;
             try
             {
-                assembly = File.Exists(assemblyPath) ? context.LoadFromAssemblyPath(assemblyPath) : context.LoadFromAssemblyName(assemblyName);
+                assembly = File.Exists(assemblyPath) ? context.LoadFromAssemblyPath(assemblyPath ?? string.Empty) : context.LoadFromAssemblyName(assemblyName);
             }
             catch
             {

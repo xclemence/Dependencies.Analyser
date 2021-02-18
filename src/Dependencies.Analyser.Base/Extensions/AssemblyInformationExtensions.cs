@@ -14,7 +14,7 @@ namespace Dependencies.Analyser.Base.Extensions
             if (!info.IsLocalAssembly || !info.IsResolved)
                 return;
 
-            if (!File.Exists(info.FilePath))
+            if (info.FilePath is null || !File.Exists(info.FilePath))
                 return;
 
             var fileInfo = new FileInfo(info.FilePath);

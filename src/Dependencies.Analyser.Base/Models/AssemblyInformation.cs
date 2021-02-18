@@ -12,7 +12,7 @@ namespace Dependencies.Analyser.Base.Models
     }
 
     [DebuggerDisplay("Name = {Name}, Loaded Version = {LoadedVersion}, Local= {IsLocalAssembly}, Resolved={IsResolved} , Links = {Links.Count}")]
-    public class AssemblyInformation : IEquatable<AssemblyInformation>, IEqualityComparer<AssemblyInformation>
+    public class AssemblyInformation : IEquatable<AssemblyInformation?>
     {
 
         public AssemblyInformation(string name,
@@ -26,7 +26,7 @@ namespace Dependencies.Analyser.Base.Models
             FilePath = filePath;
         }
 
-        public string Name { get; set; }
+        public string Name { get; }
         public string? LoadedVersion { get; set; }
 
         public string? AssemblyName { get; set; }
@@ -39,7 +39,7 @@ namespace Dependencies.Analyser.Base.Models
 
         public string FullName => AssemblyName ?? Name;
 
-        public string? FilePath { get; set; }
+        public string? FilePath { get; }
 
         public bool? IsDebug { get; set; }
 
@@ -59,20 +59,11 @@ namespace Dependencies.Analyser.Base.Models
 
         public HashSet<string> ParentLinkName { get; }
 
-        public override bool Equals(object? obj) => obj is AssemblyInformation information && Equals(information);
-        public bool Equals(AssemblyInformation other)
-        {
-            return FullName == other.FullName && 
-                   IsDebug == other.IsDebug &&
-                   TargetFramework == other.TargetFramework &&
-                   TargetProcessor == other.TargetProcessor;
-        }
-
-        public bool Equals(AssemblyInformation x, AssemblyInformation y) => x.Equals(y);
+        public override bool Equals(object? obj) => Equals(obj as AssemblyInformation);
+        public virtual bool Equals(AssemblyInformation? other) => other != null && FullName == other.FullName && IsDebug == other.IsDebug && TargetFramework == other.TargetFramework && TargetProcessor == other.TargetProcessor;
         public override int GetHashCode() => HashCode.Combine(FullName, IsDebug, TargetFramework, TargetProcessor);
-        public int GetHashCode(AssemblyInformation obj) => obj.GetHashCode();
 
-        public static bool operator ==(AssemblyInformation? left, AssemblyInformation? right) => EqualityComparer<AssemblyInformation?>.Default.Equals(left, right);
+        public static bool operator ==(AssemblyInformation? left, AssemblyInformation? right) => EqualityComparer<AssemblyInformation>.Default.Equals(left, right);
         public static bool operator !=(AssemblyInformation? left, AssemblyInformation? right) => !(left == right);
     }
 }
