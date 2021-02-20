@@ -90,7 +90,7 @@ namespace Dependencies.Analyser.Native
             if (baseDirectory == null)
                 return null;
 
-            if (!fileName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase))
+            if (!fileName.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) && !fileName.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase))
                 fileName = $"{ fileName }.dll";
             var result = Directory.GetFiles(baseDirectory, fileName, SearchOption.AllDirectories);
 
