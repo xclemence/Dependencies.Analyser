@@ -1,7 +1,7 @@
 ﻿namespace Dependencies.Analyser.Base
 {
-    public interface IAnalyserServiceFactory<out T> where T : class
+    public interface IAnalyserServiceFactory
     {
-        T Create();
+        T Create<T>() where T : class;
     }
 }
