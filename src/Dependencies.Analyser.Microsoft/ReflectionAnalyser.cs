@@ -95,7 +95,7 @@ namespace Dependencies.Analyser.Microsoft
             return GetRootManaged(context, assembly.GetName(), directoryPath, fileInfo.Extension.Replace(".", "", StringComparison.InvariantCulture));
         }
 
-        private AssemblyInformation GetRootManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension)
+        private AssemblyInformation GetRootManaged(MetadataLoadContext context, System.Reflection.AssemblyName assemblyName, string baseDirectory, string extension)
         {
             var (assembly, msAssembly) = GetManaged(context, assemblyName, baseDirectory, extension);
 
@@ -104,7 +104,7 @@ namespace Dependencies.Analyser.Microsoft
             return assembly;
         }
 
-        private (AssemblyInformation assembly, Assembly? msAssembly) GetManaged(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+        private (AssemblyInformation assembly, Assembly? msAssembly) GetManaged(MetadataLoadContext context, System.Reflection.AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             if (assemblyName.Name == null)
                 throw new ArgumentNullException($"No name for assembly {assemblyName.FullName}");
@@ -130,7 +130,7 @@ namespace Dependencies.Analyser.Microsoft
             }
         }
 
-        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, AssemblyName assemblyName, string parentName,  string baseDirectory)
+        public AssemblyLink GetAssemblyLink(MetadataLoadContext context, System.Reflection.AssemblyName assemblyName, string parentName,  string baseDirectory)
         {
             if (LinksLoaded.TryGetValue(assemblyName.FullName, out var assemblyLink))
             {
@@ -150,7 +150,7 @@ namespace Dependencies.Analyser.Microsoft
             return newAssemblyLink;
         }
 
-        private static (AssemblyInformation assembly, Assembly? msAssembly) CreateManagedAssemblyInformation(MetadataLoadContext context, AssemblyName assemblyName, string baseDirectory, string extension = "dll")
+        private static (AssemblyInformation assembly, Assembly? msAssembly) CreateManagedAssemblyInformation(MetadataLoadContext context, System.Reflection.AssemblyName assemblyName, string baseDirectory, string extension = "dll")
         {
             var assemblyPath = FilePathProvider.GetAssemblyPath($"{assemblyName.Name}.{extension}", baseDirectory);
 

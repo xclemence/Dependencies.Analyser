@@ -27,7 +27,7 @@ namespace Dependencies.Analyser.Native
             var baseMap = apiMapProvider.GetApiSetMap();
 
             windowsApiMap = baseMap.Select(x => (key: x.Key, target: x.Value.FirstOrDefault(a => string.IsNullOrEmpty(a.alias)).name))
-                                    .ToDictionary(x => $"{x.key.ToUpperInvariant()}.dll", x => x.target);
+                                    .ToDictionary(x => $"{x.key.ToUpperInvariant()}.DLL", x => x.target);
         }
 
         public AssemblyInformation LoadNativeAssembly(string entryDll)
@@ -41,7 +41,7 @@ namespace Dependencies.Analyser.Native
 
         private string GetSystemFile(string fileName)
         {
-            if (windowsApiMap.TryGetValue(fileName, out var file))
+            if (windowsApiMap.TryGetValue(fileName.ToUpperInvariant(), out var file))
                 return file;
 
             return fileName;
