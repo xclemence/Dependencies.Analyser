@@ -6,6 +6,6 @@ namespace Dependencies.Analyser.Base
 {
     public interface IAssemblyAnalyser
     {
-        Task<(AssemblyInformation assemly, IDictionary<string, AssemblyLink> links)> AnalyseAsync(string dllPath);
+        Task<(AssemblyInformation assembly, IDictionary<string, AssemblyLink> links)> AnalyseAsync(string dllPath);
     }
 }
