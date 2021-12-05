@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <AnalysisLevel>5.0</AnalysisLevel>
+    <AnalysisLevel>6.0</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <Platforms>x64</Platforms>

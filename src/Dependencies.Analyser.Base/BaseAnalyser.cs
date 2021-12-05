@@ -17,7 +17,7 @@ namespace Dependencies.Analyser.Base
         protected IDictionary<string, AssemblyLink> LinksLoaded { get; } = new Dictionary<string, AssemblyLink>();
 
 
-        public async Task<(AssemblyInformation assemly, IDictionary<string, AssemblyLink> links)> AnalyseAsync(string dllPath) =>
+        public async Task<(AssemblyInformation assembly, IDictionary<string, AssemblyLink> links)> AnalyseAsync(string dllPath) =>
             await Task.Run(() => Analyse(dllPath)).ConfigureAwait(false);
 
         protected abstract (AssemblyInformation assembly, IDictionary<string, AssemblyLink> links) Analyse(string dllPath);
